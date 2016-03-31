@@ -9,7 +9,7 @@ var ip = process.env.IP || "127.0.0.1";
 app.use(express.static('public'));
 
 app.get('/', function(req, res) {
-    res.sendFile(__dirname + "/html/index.html");
+    res.sendFile(__dirname + "/html/turf.html");
 });
 
 var userData = function(name) {
