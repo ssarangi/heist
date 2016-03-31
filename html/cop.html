@@ -1,0 +1,351 @@
+<html>
+
+    <head>
+        <meta charset=utf-8 />
+        <title>EV charging route planner</title>
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v1.3.0/turf.min.js'></script>
+        <script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+        <script src="../js/d3.v3.min.js" charset="utf-8"></script>
+        <script src="../socket.io/socket.io.js"></script>
+
+        <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            path {
+                pointer-events: none;
+            }
+            
+            #map {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+            }
+            
+            .leaflet-container {
+                cursor: default;
+            }
+            
+            .leaflet-popup-content .marker-title {
+                font-weight: 400;
+                color: #999;
+                line-height: 1.3em;
+            }
+            
+            .marker-title span {
+                color: #0071bc;
+                font-weight: bold;
+            }
+            
+            #findme {
+                display: none;
+                background: #00704A
+            }
+            
+            #milecount {
+                line-height: 2em;
+                color: #00704A
+            }
+            
+            .endpoint {
+                cursor: webkit-grab;
+            }
+            
+            .endpoint:active {
+                cursor: webkit-grabbing;
+            }
+            
+            .vehicle {
+                transition: all 0.25s linear;
+            }
+            
+            .station {
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                margin: -10px;
+                transition: width 0.25s, height 0.25s, margin 0.25s;
+                z-index: -1;
+                border: 2px solid white;
+            }
+            
+            .station:hover {
+                width: 24px;
+                height: 24px;
+                margin: -12px;
+                z-index: 99;
+            }
+            
+            .station:hover ~ .station {
+                width: 0px;
+                height: 0px;
+                margin: 0px;
+                border: 0px;
+            }
+            
+            path {
+                stroke-dashoffset: 10000;
+                stroke-dasharray: 10000;
+                -webkit-transition: stroke-dashoffset 4s;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id='map' class='col12'></div>
+        <div class='col3 fill-white keyline-left pin-topright keyline-all pad2' style='z-index:99; margin:10px'>
+            <fieldset class='with-icon hidden'>
+                <span class='icon search'></span>
+                <input type='text' value='Start address' id='startaddress' />
+            </fieldset>
+            <fieldset class='with-icon hidden'>
+                <span class='icon search'></span>
+                <input type='text' placeholder='Destination' id='endaddress' />
+            </fieldset>
+            <div id='directions'>
+                <div id='directionstep' class='col9 strong'></div>
+                <div id='distance' class="col3 quiet small text-right"></div>
+            </div>
+        </div>
+
+        <script>
+            var socket = io();
+            L.mapbox.accessToken = 'pk.eyJ1Ijoic3NhcmFuZ2kxMjMiLCJhIjoiY2ltOWpmeno4MDNwNHRubTZobW50Y2ljZiJ9.yidy_pQjADEQ8vD7j_m1hw';
+            var map = L.mapbox.map('map', 'peterqliu.39d14f8b', {
+                    'scrollWheelZoom': false
+                })
+                .setView([37.8, -96], 14);
+            map.on('dragstart', function () {
+                trackVehicle = false
+            });
+
+            var vehicleIcon = {
+                icon: L.divIcon({
+                    className: 'vehicle',
+                    html: '<div style="width:18px; height:18px; background:green; border-radius:50%; border:4px solid white"></div>',
+                    iconSize: [20, 20]
+                })
+            };
+
+            var startPos = [-122.42,37.78];
+            var vehicleMarker = L.marker(startPos, vehicleIcon)
+                .addTo(map);
+
+            socket.on('thief_loc', function(msg) {
+                var lng = msg.lng;
+                var lat = msg.lat;
+                map.panTo([lat, lng]);
+                vehicleMarker.setLatLng({"lat": lat, "lng": lng});
+            });
+
+            // var startPos = [-122.42, 37.78];
+            // var endPos = [-122.265491, 37.796931];
+            // //Range I can maintain after every charge
+            // vehicleRange = 200 * 1609.34;
+            // var path;
+            // var moveStep;
+            // var trackVehicle = true;
+
+            // function mileConvert(meters) {
+            //     return (meters / 1609.34).toFixed(2)
+            // };
+
+            // function pointBuffer(pt, radius, units, resolution) {
+            //     var ring = []
+            //     var resMultiple = 360 / resolution;
+            //     for (var i = 0; i < resolution; i++) {
+            //         var spoke = turf.destination(pt, radius, i * resMultiple, units);
+            //         ring.push(spoke.geometry.coordinates);
+            //     }
+            //     if ((ring[0][0] !== ring[ring.length - 1][0]) && (ring[0][1] != ring[ring.length - 1][1])) {
+            //         ring.push([ring[0][0], ring[0][1]]);
+            //     }
+            //     return turf.polygon([ring])
+            // }
+            // $.get('stations.geojson', function (data) {
+
+            //     var stations = (data);
+            //     stations = JSON.parse(data);
+
+
+
+            //     var endpointIcon = {
+            //         icon: L.divIcon({
+            //             className: 'endpoint',
+            //             html: '<div style="width:16px; height:16px; background:white; border-radius:50%; border:4px solid green"></div>',
+            //             iconSize: [20, 20]
+            //         }),
+            //         draggable: true
+            //     };
+
+            //     var startMarker = L.marker([startPos[1], startPos[0]], endpointIcon)
+            //         .on('dragend', function () {
+            //             var pos = startMarker.getLatLng();
+            //             startPos = [pos.lng, pos.lat];
+            //             getDirections([startPos, endPos])
+            //         });
+
+            //     var endMarker = L.marker([endPos[1], endPos[0]], endpointIcon).on('dragend', function () {
+            //         var pos = endMarker.getLatLng();
+            //         endPos = [pos.lng, pos.lat];
+            //         getDirections([startPos, endPos])
+            //     });
+
+
+            //     startMarker.addTo(map);
+            //     endMarker.addTo(map);
+
+            //     var points = [startPos, endPos];
+
+            //     function getDirections(points, currenttick) {
+            //         trackVehicle = true;
+            //         //convert arrays of latlng into a bracket-free string
+            //         var waypoints = JSON.stringify(points).replace(/\],\[/g, ";").replace(/\[/g, '').replace(/\]/g, '');
+            //         var directionsAPI = 'https://api.tiles.mapbox.com/v4/directions/mapbox.driving/' + waypoints + '.json?access_token=' + L.mapbox.accessToken;
+            //         //console.log(directionsAPI)
+            //         $.get(directionsAPI, function (data) {
+            //             //data=JSON.parse(data);
+            //             window.clearTimeout(moveStep);
+
+            //             $('path').remove();
+            //             $('.vehicle').remove();
+            //             $('#startaddress').val(data.origin.properties.name);
+            //             $('#endaddress').val(data.destination.properties.name);
+            //             path = data.routes[0]['geometry']['coordinates'];
+
+
+            //             var vehicleIcon = {
+            //                 icon: L.divIcon({
+            //                     className: 'vehicle',
+            //                     html: '<div style="width:18px; height:18px; background:green; border-radius:50%; border:4px solid white"></div>',
+            //                     iconSize: [20, 20]
+            //                 })
+            //             };
+            //             var vehicleMarker = L.marker(startPos, vehicleIcon)
+            //                 .addTo(map);
+
+            //             var linestring = turf.linestring(path, {
+            //                 "stroke": "green",
+            //                 "stroke-width": 4
+            //             });
+
+
+
+            //             var j;
+            //             var turnbyturnstep = 0;
+            //             var turnJunctures = data.routes[0].steps.map(function (step) {
+            //                 return JSON.stringify(step.maneuver.location.coordinates)
+            //             });
+            //             if (currenttick) {
+            //                 j = currenttick
+            //             }
+            //             else {
+            //                 j = 0
+            //             }
+            //             addLayer(linestring);
+
+            //             tick();
+
+            //             function tick() {
+            //                 $('.station:not(:hover)').remove();
+            //                 // Set the marker to be at the same point as one
+            //                 // of the segments or the line.
+            //                 var nextStep = linestring.geometry.coordinates[j];
+
+            //                 //move vehicle and buffer
+            //                 vehicleMarker.setLatLng(L.latLng([nextStep[1], nextStep[0]]));
+
+            //                 socket.emit("user_loc", L.latLng([nextStep[1], nextStep[0]]));
+
+            //                 turnbyturnstep = turnJunctures.lastIndexOf(JSON.stringify(nextStep));
+            //                 if (turnbyturnstep >= 0) {
+            //                     var step = data.routes[0].steps[turnbyturnstep];
+            //                     d3.select('#directionstep')
+            //                         .text(data.routes[0].steps[turnbyturnstep + 1].maneuver.instruction);
+            //                     d3.select('#distance')
+            //                         .text(mileConvert(step.distance) + ' mi');
+
+            //                     turnbyturnstep++
+            //                 };
+
+            //                 //track map to the marker
+            //                 if ($('.station:hover').length == 0 && trackVehicle) {
+            //                     map.panTo([nextStep[1], nextStep[0]])
+            //                 };
+
+
+            //                 var within = turf.featurecollection(stations.features.filter(function (station) {
+            //                     if (turf.distance(station, turf.point(nextStep), 'miles') <= 1) {
+            //                         return true
+            //                     }
+            //                 }));
+
+            //                 within.features.forEach(function (feature) {
+            //                     var coords = ([parseFloat(feature.geometry.coordinates[0]), parseFloat(feature.geometry.coordinates[1])]);
+
+            //                     var prop = feature.properties;
+            //                     var connectors = JSON.stringify(prop.connectors).replace(/null/, 'unknown').replace(/,/g, ', ');
+            //                     prop.title = '<span>Click to detour here</span><br><br>' + prop.name + '<br><strong>Connectors: ' + prop.connectors + '</strong>';
+            //                     prop.icon = {
+            //                         "iconUrl": "station.svg",
+            //                         "popupAnchor": [0, -15],
+            //                         "className": "station"
+            //                     }
+            //                 });
+
+            //                 L.mapbox
+            //                     .featureLayer()
+            //                     .on('layeradd', function (e) {
+            //                         var marker = e.layer,
+            //                             feature = marker.feature;
+
+            //                         marker.setIcon(L.icon(feature.properties.icon));
+            //                     })
+            //                     .on('click', function (e) {
+            //                         $(this).remove();
+            //                         points.splice(points.length - 1, 0, nextStep, [e.latlng.lng, e.latlng.lat]);
+            //                         getDirections(points, j);
+            //                     })
+            //                     .setGeoJSON(within)
+            //                     .addTo(map)
+            //                     .on('mouseover', function (e) {
+            //                         e.layer.openPopup()
+            //                     })
+            //                     .on('mouseout', function (e) {
+            //                         e.layer.closePopup()
+            //                     })
+
+            //                 j++;
+            //                 // Move to the next point of the line
+            //                 // until `j` reaches the length of the array.
+            //                 if (j < linestring.geometry.coordinates.length) {
+            //                     moveStep = setTimeout(tick, 250)
+            //                 };
+
+            //             }
+
+
+
+
+            //             function addLayer(geoJSON) {
+            //                 L.mapbox.featureLayer().setGeoJSON(geoJSON).addTo(map)
+            //             }
+            //             //addLayer(within);
+            //             $('path').css('stroke-offset'); // used just to delay before animating
+            //             $('path').css('stroke-dashoffset', 0);
+            //         })
+            //     };
+
+            //     getDirections(points);
+
+            // })
+        </script>
+    </body>
+
+</html>

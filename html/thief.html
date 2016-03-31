@@ -7,7 +7,8 @@
 <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v1.3.0/turf.min.js'></script>
 <script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script><link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="d3.v3.min.js" charset="utf-8"></script>
+<script src="../js/d3.v3.min.js" charset="utf-8"></script>
+<script src="../socket.io/socket.io.js"></script>
 
 <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
 <style>
@@ -47,6 +48,7 @@
 </div>
 
 <script>
+  var socket = io();
   L.mapbox.accessToken = 'pk.eyJ1Ijoic3NhcmFuZ2kxMjMiLCJhIjoiY2ltOWpmeno4MDNwNHRubTZobW50Y2ljZiJ9.yidy_pQjADEQ8vD7j_m1hw';
   var startPos = [-122.42,37.78];
   var endPos = [-122.265491, 37.796931];
@@ -69,7 +71,8 @@
     }
     return turf.polygon([ring])
   }
-$.get('stations.geojson', function(data){
+
+$.get('js/stations.geojson', function(data) {
 
   var stations = (data);
   stations = JSON.parse(data);
@@ -107,14 +110,7 @@ $.get('stations.geojson', function(data){
 
   var points= [startPos, endPos];
 
-  function get_distance_to_next(linestring, j){
-      var currStep = linestring.geometry.coordinates[j-1];
-      var nextStep = linestring.geometry.coordinates[j];
-      var distance = Math.pow(nextStep[1] - currStep[1], 2) + Math.pow(nextStep[0] - currStep[0], 2)
-      console.log(distance);
-  }
-
-  function getDirections(points, currenttick){
+  function getDirections(points, currenttick) {
     trackVehicle=true;
     //convert arrays of latlng into a bracket-free string
     var waypoints= JSON.stringify(points).replace(/\],\[/g, ";").replace(/\[/g,'').replace(/\]/g,'');
@@ -146,6 +142,7 @@ $.get('stations.geojson', function(data){
           "stroke-width": 4
     });
 
+    
 
       var j;
       var turnbyturnstep=0;
@@ -153,6 +150,7 @@ $.get('stations.geojson', function(data){
       if (currenttick){j=currenttick}
       else {j=0}
       addLayer(linestring);
+      
       tick();
 
       function tick() {
@@ -161,14 +159,10 @@ $.get('stations.geojson', function(data){
           // of the segments or the line.
         var nextStep=linestring.geometry.coordinates[j];
 
-        if (j > 0)
-          get_distance_to_next(linestring, j);
-
           //move vehicle and buffer
           vehicleMarker.setLatLng(L.latLng([nextStep[1],nextStep[0]]));
 
-
-
+          socket.emit("thief_loc", L.latLng([nextStep[1],nextStep[0]]));
 
           turnbyturnstep=turnJunctures.lastIndexOf(JSON.stringify(nextStep));
         if(turnbyturnstep>=0){
@@ -200,6 +194,7 @@ $.get('stations.geojson', function(data){
                   "className": "station"
             }
           });
+          
           L.mapbox
             .featureLayer()
             .on('layeradd', function(e) {
@@ -225,7 +220,7 @@ $.get('stations.geojson', function(data){
           j++;
           // Move to the next point of the line
           // until `j` reaches the length of the array.
-          if (j < linestring.geometry.coordinates.length) {moveStep=setTimeout(tick, 250)};
+          if (j < linestring.geometry.coordinates.length) {moveStep=setTimeout(tick, 25)};
 
       }
 

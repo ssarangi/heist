@@ -8,8 +8,12 @@ var ip = process.env.IP || "127.0.0.1";
 
 app.use(express.static('public'));
 
-app.get('/', function(req, res) {
-    res.sendFile(__dirname + "/html/turf.html");
+app.get('/thief', function(req, res) {
+    res.sendFile(__dirname + "/html/thief.html");
+});
+
+app.get('/cop', function(req, res) {
+    res.sendFile(__dirname + "/html/cop.html");
 });
 
 var userData = function(name) {
@@ -53,12 +57,8 @@ io.on('connection', function(socket) {
        socket.broadcast.emit('chat message', msg);
     });
     
-    socket.on('user_location', function(user_data) {
-        users_id_map[this.id].lng = user_data["lng"];
-        users_id_map[this.id].lat = user_data["lat"];
-        users_id_map[this.id].id = user_data["id"];
-        
-        socket.broadcast.emit('user_location', user_data); 
+    socket.on('thief_loc', function(user_data) {
+        socket.broadcast.emit('thief_loc', user_data); 
     });
 })
 
