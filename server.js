@@ -82,6 +82,10 @@ io.on('connection', function(socket) {
         socket.broadcast.emit('cop_loc', user_data);
     });
     
+    socket.on('cop_direction_changed', function(user_data) {
+        socket.broadcast.emit('cop_direction_changed', user_data); 
+    });
+    
     socket.on('new_cop_request', function(username) {
         if (Object.keys(cops).length > MAX_COPS) {
             socket.emit("no_room", "");

@@ -33,7 +33,13 @@ function thief_game_loop() {
         this.thief.update_marker();
         maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
         socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
-        if (!this.thief.at_end_pt()) { moveStep = setTimeout(update_frame, 100); }
+        if (!this.thief.at_end_pt()) { 
+            moveStep = setTimeout(update_frame, 100);
+        } else {
+            this.thief.currentpos = this.thief.startpoint;
+            this.thief.reset();
+            moveStep = setTimeout(update_frame, 100);
+        }
     }
     
     var thief = this.thief;
@@ -99,14 +105,13 @@ function cop_game_loop() {
     
     socket.on('cop_direction_changed', function(user_data) {
         var id = user_data['id'];
-        var linestring = user_data['linestring'];
-        maputils.clearPath(id);
-        maputils.draw_path(id, linestring);
+        var path = user_data['path'];
+        maputils.draw_new_path(id, path);
     });
     
     function my_directions_updated() {
         maputils.draw_new_path(me.id, me.path);
-        socket.emit("cop_direction_changed", {"id": me.id, "linestring": me.linestring});
+        socket.emit("cop_direction_changed", {"id": me.id, "path": me.path});
         
         me.add_icon(maputils);
         
@@ -119,7 +124,7 @@ function cop_game_loop() {
     
     function update_my_frame() {
         me.update_marker();
-        //maputils.panTo(me.currentpos.lat, me.currentpos.lng);
+        maputils.panTo(me.currentpos.lat, me.currentpos.lng);
         socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
         if (!me.at_end_pt()) { moveStep = setTimeout(update_my_frame, 100); }
     }
