@@ -7,7 +7,10 @@ function Pos(lat, lng) {
     }
 }
 
-function Thief() {
+var THIEF = 0;
+var COP = 1
+
+function Actor(type, id) {
     this.icon = {
         icon: L.divIcon({
                 className: 'vehicle',
@@ -22,11 +25,21 @@ function Thief() {
     this.endpoint = null;
     this.path = null;
     this.linestring = null;
+    this.type = type;
+    this.id = id;
     
     this.where_in_path = -1;
+    
+    this.reset = function() {
+        this.where_in_path = 0;
+        this.startpoint = this.currentpos;
+    }
 
-    this.get_directions = function(map_utils, start_pt, end_pt, on_complete) {
+    this.get_directions = function(map_utils, on_complete) {
         var thief = this;
+        var start_pt = thief.startpoint;
+        var end_pt = thief.endpoint;
+        
         map_utils.get_directions([start_pt.lng, start_pt.lat], [end_pt.lng, end_pt.lat], function(data) {
             thief.path = data.routes[0]['geometry']['coordinates'];
             thief.linestring = turf.linestring(thief.path, {
@@ -44,7 +57,9 @@ function Thief() {
     }
     
     this.add_icon = function(map_utils) {
-        this.marker = map_utils.add_icon(this.icon, this.startpoint.array());
+        if (this.marker == null) {
+            this.marker = map_utils.add_icon(this.icon, this.startpoint.array());
+        }
     }
     
     this.next_path_step = function() {

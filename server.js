@@ -27,7 +27,13 @@ var userData = function(name) {
     this.lat = null;
 }
 
+
+var MAX_COPS = 5;
 var users_id_map = {}
+var current_cop = 0;
+var cops = {}
+
+var thief_loc = null;
 
 io.on('connection', function(socket) {
     console.log('a user connected');
@@ -62,7 +68,17 @@ io.on('connection', function(socket) {
     });
     
     socket.on('thief_loc', function(user_data) {
+        thief_loc = user_data;
         socket.broadcast.emit('thief_loc', user_data); 
+    });
+    
+    socket.on('new_cop_request', function(username) {
+        if (Object.keys(cops).length > MAX_COPS)
+            io.sockets.socket(this.id).emit("no_room", "");
+        else {
+            io.sockets.socket(this.id).emit("cop_id", {"id": current_cop, "thief_pos": thief_loc});
+            current_cop += 1;
+        }
     });
 })
 

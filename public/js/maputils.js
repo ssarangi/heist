@@ -12,6 +12,10 @@ function MapUtils(map, access_token) {
         $('path').css('stroke-dashoffset',0);
     }
     
+    this.clearPath = function() {
+        $('path').remove();
+    }
+    
     this.get_directions = function(p1, p2, callback) {
         var points = [p1, p2];
         var waypoints= JSON.stringify(points).replace(/\],\[/g, ";").replace(/\[/g,'').replace(/\]/g,'');
