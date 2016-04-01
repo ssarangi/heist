@@ -85,6 +85,13 @@ function Actor(type, id) {
         }
     }
     
+    this.update_networked_marker = function(pos) {
+        if (this.marker != null) {
+            this.currentpos = pos;
+            this.marker.setLatLng([pos.lat, pos.lng]);
+        }
+    }
+    
     this.at_end_pt = function() {
         if (this.where_in_path == this.linestring.geometry.coordinates.length)
             return true;

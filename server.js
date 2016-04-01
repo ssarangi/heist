@@ -73,10 +73,10 @@ io.on('connection', function(socket) {
     });
     
     socket.on('new_cop_request', function(username) {
-        if (Object.keys(cops).length > MAX_COPS)
-            io.sockets.socket(this.id).emit("no_room", "");
-        else {
-            io.sockets.socket(this.id).emit("cop_id", {"id": current_cop, "thief_pos": thief_loc});
+        if (Object.keys(cops).length > MAX_COPS) {
+            socket.emit("no_room", "");
+        } else {
+            socket.emit("cop_id", {"id": current_cop, "thief_pos": thief_loc});
             current_cop += 1;
         }
     });

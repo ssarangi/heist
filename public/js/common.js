@@ -51,6 +51,7 @@ function cop_game_loop() {
     var username = "myname";
     var my_id = null;
     var me = null;
+    var thief = null;
     
     // Emit a new request
     socket.emit("new_cop_request", username);
@@ -64,9 +65,21 @@ function cop_game_loop() {
         alert("No more room on Server. Try again later!!!");
     });
     
+    socket.on('thief_loc', function(loc) {
+         if (thief == null) {
+             thief = new Actor(THIEF, 0);
+             thief.startpoint = new Pos(loc["lat"], loc["lng"]);
+             thief.add_icon(maputils);
+        }
+
+         var pos = new Pos(loc[0], loc[1]);
+         thief.update_networked_marker(loc);
+         maputils.panTo(loc.lat, loc.lng);
+    });
+    
     function initialize_cop() {
-        me = new Actor(COP, my_id);
-        me.initialize(new Pos(37.796931, -122.265491), new Pos(37.78, -122.42));
-        me.get_directions(maputils, )
+        // me = new Actor(COP, my_id);
+        // me.initialize(new Pos(37.796931, -122.265491), new Pos(37.78, -122.42));
+        // me.get_directions(maputils, )
     }
 }
