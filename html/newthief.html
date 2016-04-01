@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Collaborative Map Editing</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v1.3.0/turf.min.js'></script>
+    <script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script><link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <link rel="stylesheet" type="text/css" href="css/client.css">
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row-fluid">
+        <div id='map' class='col12'></div>
+      </div>
+    </div>
+
+    <!-- All the scripts needed for the page -->
+    <script src="../socket.io/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script src="../js/maputils.js"></script>
+    <script src="../js/actor.js"></script>
+    <script src="../js/common.js"></script>
+  </body>
+</html>

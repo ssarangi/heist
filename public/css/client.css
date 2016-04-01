@@ -1,0 +1,81 @@
+body {
+    margin:0;
+    padding:0;
+}
+
+path {
+    pointer-events:none;
+}
+
+#map {
+    position:absolute;
+    top:0;
+    bottom:0;
+}
+
+.leaflet-container {
+    cursor:default;
+}
+
+.leaflet-popup-content .marker-title {
+    font-weight:400;
+    color:#999;
+    line-height:1.3em;
+}
+
+.marker-title span {
+    color:#0071bc;
+    font-weight:bold;
+}
+
+#findme {
+    display:none;
+    background:#00704A;
+}
+
+#milecount {
+    line-height:2em;
+    color:#00704A;
+}
+
+.endpoint {
+    cursor:webkit-grab;
+}
+
+.endpoint:active {
+    cursor:webkit-grabbing;
+}
+
+.vehicle {
+    transition:all 0.25s linear;
+}
+
+.station {
+    border-radius:50%;
+    width:20px;
+    height:20px;
+    margin:-10px;
+    transition:width 0.25s, height 0.25s, margin 0.25s;
+    z-index:-1;
+    border:2px solid white;
+}
+
+.station:hover {
+    width:24px;
+    height:24px;
+    margin:-12px;
+    z-index:99;
+}
+
+.station:hover ~ .station {
+    width:0px;
+    height:0px;
+    margin:0px;
+    border:0px;
+}
+
+path {
+    stroke-dashoffset: 10000;
+    stroke-dasharray:10000;
+    -webkit-transition:stroke-dashoffset 4s;
+}

@@ -26,8 +26,7 @@
   .station{border-radius:50%;width:20px; height:20px; margin:-10px;transition:width 0.25s, height 0.25s, margin 0.25s;z-index:-1;border:2px solid white;}
   .station:hover { width:24px; height:24px; margin:-12px; z-index:99;}
   .station:hover ~ .station {width:0px;height:0px; margin:0px; border:0px;}
-  path {stroke-dashoffset: 10000; stroke-dasharray:10000; -webkit-transition:stroke-dashoffset 4s;
-}
+  path {stroke-dashoffset: 10000; stroke-dasharray:10000; -webkit-transition:stroke-dashoffset 4s;}
 </style>
 </head>
 <body>
@@ -77,8 +76,8 @@ $.get('js/stations.geojson', function(data) {
   var stations = (data);
   stations = JSON.parse(data);
 
-  var map = L.mapbox.map('map', 'peterqliu.39d14f8b',{'scrollWheelZoom':false})
-    .setView([37.8, -96], 14);
+  var map = L.mapbox.map('map', 'peterqliu.39d14f8b',{'scrollWheelZoom':true})
+    .setView([37.78, -122.42], 14);
   map.on('dragstart', function(){trackVehicle=false});
 
 
@@ -120,10 +119,10 @@ $.get('js/stations.geojson', function(data) {
       //data=JSON.parse(data);
       window.clearTimeout(moveStep);
 
-      $('path').remove();
-      $('.vehicle').remove();
-      $('#startaddress').val(data.origin.properties.name);
-      $('#endaddress').val(data.destination.properties.name);
+      // $('path').remove();
+      // $('.vehicle').remove();
+      // $('#startaddress').val(data.origin.properties.name);
+      // $('#endaddress').val(data.destination.properties.name);
       path = data.routes[0]['geometry']['coordinates'];
 
 
@@ -142,6 +141,7 @@ $.get('js/stations.geojson', function(data) {
           "stroke-width": 4
     });
 
+    var jsonstringify = JSON.stringify(linestring, null, 2);
     
 
       var j;
@@ -151,7 +151,7 @@ $.get('js/stations.geojson', function(data) {
       else {j=0}
       addLayer(linestring);
       
-      tick();
+      // tick();
 
       function tick() {
         $('.station:not(:hover)').remove();

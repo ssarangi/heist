@@ -16,6 +16,10 @@ app.get('/cop', function(req, res) {
     res.sendFile(__dirname + "/html/cop.html");
 });
 
+app.get('/nt', function(req, res) {
+    res.sendFile(__dirname + "/html/newthief.html");
+});
+
 var userData = function(name) {
     this.name = name;
     this.id = null;
