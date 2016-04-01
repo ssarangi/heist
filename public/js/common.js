@@ -8,6 +8,9 @@
                   .setView([37.8, -96], 14);
                   
     var maputils = new MapUtils(map, this.access_token);
+    var socket = io();
+
+    var moveStep;
     
     function fly_to_current_loc() {
         if (window.navigator && window.navigator.geolocation) {
@@ -40,8 +43,14 @@
     // fly_to_current_loc();
 
     function thief_directions_updated() {
-        maputils.draw_path(this.thief.path_coords());
+        maputils.draw_path(this.thief.linestring);
         this.thief.add_icon(maputils);
+        
+        // Move the map the where the thief is.
+        maputils.panTo(this.thief.startpoint.lat, this.thief.startpoint.lng);
+        
+        window.clearTimeout(moveStep);
+        update_frame();
     }
 
     // Initialize the Actor. In this case, a new thief first
@@ -49,10 +58,10 @@
     this.thief.initialize(new Pos(37.78, -122.42), new Pos(37.796931, -122.265491));
     this.thief.get_directions(maputils, this.thief.startpoint, this.thief.endpoint, thief_directions_updated);
     
-    // Move the map the where the thief is.
-    maputils.panTo(this.thief.startpoint.lat, this.thief.startpoint.lng);
-    
     function update_frame() {
-        
+        this.thief.update_marker();
+        maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
+        socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
+        if (!this.thief.at_end_pt()) { moveStep = setTimeout(update_frame, 250); }
     }
 })();

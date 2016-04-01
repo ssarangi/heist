@@ -20,16 +20,10 @@ function MapUtils(map, access_token) {
     }
     
     this.add_icon = function(icon, pos) {
-        L.marker(pos, icon).addTo(map);
+        return L.marker(pos, icon).addTo(map);
     }
     
-    this.draw_path = function(path_coords) {
-        var path = path_coords;
-        var linestring = turf.linestring(path, {
-          "stroke": "green",
-          "stroke-width": 4
-        });
-        
+    this.draw_path = function(linestring) {
         this.addLayer(linestring);
     }
 }
