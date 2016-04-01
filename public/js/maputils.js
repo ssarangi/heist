@@ -30,4 +30,15 @@ function MapUtils(map, access_token) {
     this.draw_path = function(linestring) {
         this.addLayer(linestring);
     }
+    
+    this.draw_new_path = function(id, path) {
+        function reverseCoords(pair) {return [pair[1], pair[0]]}
+        var processedCoords = path.map(function(n){return reverseCoords(n)});
+        var color_name = getColorNameFromId(id);
+        var color_val = getColorHexFromId(id);
+        
+        $('.'+ color_name + 'path').remove();
+        var courierRoute = 
+            L.polyline(processedCoords, {color: "#"+ color_val, className: color_name + 'path'}).addTo(this.map);
+    }
 }

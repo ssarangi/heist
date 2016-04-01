@@ -30,7 +30,7 @@ var userData = function(name) {
 
 var MAX_COPS = 5;
 var users_id_map = {}
-var current_cop = 0;
+var current_cop = 1;
 var cops = {}
 
 var thief_loc = null;
@@ -39,10 +39,11 @@ io.on('connection', function(socket) {
     console.log('a user connected');
     
     socket.on('disconnect', function() {
-        var username = users_id_map[this.id];
-        delete users_id_map[this.id];
-        socket.broadcast.emit('user_disconnected', username);
-        console.log(username + ' disconnected');
+        // var username = users_id_map[this.id];
+        // delete users_id_map[this.id];
+        // socket.broadcast.emit('user_disconnected', username);
+        // console.log(username + ' disconnected');
+        delete cops[this.id];
     });
     
     socket.on('user_connected', function(username) {
@@ -72,11 +73,16 @@ io.on('connection', function(socket) {
         socket.broadcast.emit('thief_loc', user_data); 
     });
     
+    socket.on('cop_loc', function(user_data) {
+        socket.broadcast.emit('cop_loc', user_data);
+    });
+    
     socket.on('new_cop_request', function(username) {
         if (Object.keys(cops).length > MAX_COPS) {
             socket.emit("no_room", "");
         } else {
-            socket.emit("cop_id", {"id": current_cop, "thief_pos": thief_loc});
+            socket.emit("cop_id", {"id": current_cop, "thief_loc": thief_loc});
+            cops[this.id] = current_cop;
             current_cop += 1;
         }
     });

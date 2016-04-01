@@ -17,7 +17,7 @@ function thief_game_loop() {
         maputils.draw_path(this.thief.linestring);
         this.thief.add_icon(maputils);
         
-        // Move the map the where the thief is.
+        // Move the map to where the thief is.
         maputils.panTo(this.thief.startpoint.lat, this.thief.startpoint.lng);
         
         window.clearTimeout(moveStep);
@@ -52,13 +52,18 @@ function cop_game_loop() {
     var my_id = null;
     var me = null;
     var thief = null;
-    
+    var moveStep;
+
+    var cop_markers = {}
+
     // Emit a new request
-    socket.emit("new_cop_request", username);
+    if (my_id == null)
+        socket.emit("new_cop_request", username);
     
-    socket.on('cop_id', function(id) {
-       my_id = id;
-       initialize_cop();
+    socket.on('cop_id', function(info) {
+       my_id = info["id"];
+       var thief_loc = info.thief_loc;
+       initialize_cop(thief_loc);
     });
     
     socket.on('no_room', function(msg) {
@@ -74,12 +79,61 @@ function cop_game_loop() {
 
          var pos = new Pos(loc[0], loc[1]);
          thief.update_networked_marker(loc);
-         maputils.panTo(loc.lat, loc.lng);
     });
     
-    function initialize_cop() {
-        me = new Actor(COP, my_id);
-        me.initialize(new Pos(37.796931, -122.265491), new Pos(37.78, -122.42));
-        // me.get_directions(maputils, )
+    socket.on('cop_loc', function(user_data) {
+        var id = user_data['id'];
+        var lat = user_data['lat'];
+        var lng = user_data['lng'];
+        
+        if (!(id in cop_markers)) {
+            cop_markers[id] = new NPCActor(id);
+            cop_markers[id].currentpos = new Pos(lat, lng);
+            cop_markers[id].add_icon(maputils);
+        }
+        
+        cop_markers[id].update_marker(lat, lng);
+    });
+    
+    socket.on('cop_direction_changed', function(user_data) {
+        var id = user_data['id'];
+        var linestring = user_data['linestring'];
+        maputils.clearPath(id);
+        maputils.draw_path(id, linestring);
+    });
+    
+    function my_directions_updated() {
+        // maputils.draw_path(me.linestring);
+        maputils.draw_new_path(me.id, me.path);
+        socket.emit("cop_direction_changed", {"id": me.id, "linestring": me.linestring});
+        
+        me.add_icon(maputils);
+        
+        // Move the map to where I am moving
+        maputils.panTo(me.startpoint.lat, me.startpoint.lng);
+        
+        window.clearTimeout(moveStep);
+        update_my_frame();
     }
+    
+    function update_my_frame() {
+        me.update_marker();
+        maputils.panTo(me.currentpos.lat, me.currentpos.lng);
+        socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
+        if (!me.at_end_pt()) { moveStep = setTimeout(update_my_frame, 100); }
+    }
+    
+    function initialize_cop(thief_loc) {
+        me = new Actor(COP, my_id);
+        me.initialize(new Pos(37.796931, -122.265491), new Pos(thief_loc["lat"], thief_loc["lng"]));
+        me.get_directions(maputils, my_directions_updated);
+    }
+    
+    map.on('click', function(e) {
+        window.clearTimeout(moveStep);
+        me.endpoint = new Pos(e['latlng']['lat'], e['latlng']['lng']);
+        me.reset();
+        // maputils.clearPath();
+        me.get_directions(maputils, my_directions_updated);
+    });
 }

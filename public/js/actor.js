@@ -10,12 +10,14 @@ function Pos(lat, lng) {
 var THIEF = 0;
 var COP = 1
 
+// http://www.livetrain.nyc/
+
 function Actor(type, id) {
     this.icon = {
         icon: L.divIcon({
-                className: 'vehicle',
-                html: '<div style="width:18px; height:18px; background:green; border-radius:50%; border:4px solid white"></div>',
-                iconSize: [20, 20]
+                className: 'couriericon ' + getColorNameFromId(id),
+                html: '',
+                iconSize: [15, 15]
             })
     };
     this.marker = null;
@@ -36,16 +38,17 @@ function Actor(type, id) {
     }
 
     this.get_directions = function(map_utils, on_complete) {
-        var thief = this;
-        var start_pt = thief.startpoint;
-        var end_pt = thief.endpoint;
+        var actor = this;
+        var start_pt = actor.startpoint;
+        var end_pt = actor.endpoint;
         
         map_utils.get_directions([start_pt.lng, start_pt.lat], [end_pt.lng, end_pt.lat], function(data) {
-            thief.path = data.routes[0]['geometry']['coordinates'];
-            thief.linestring = turf.linestring(thief.path, {
-                  "stroke": "green",
+            actor.path = data.routes[0]['geometry']['coordinates'];
+            // actor.path = data.routes[0].geometry.coordinates;
+            actor.linestring = turf.linestring(actor.path, {
+                  "stroke": "#" + getColorHexFromId(actor.id),
                   "stroke-width": 4
-            });             
+            });
             on_complete();
         });
     }
@@ -67,7 +70,7 @@ function Actor(type, id) {
             this.where_in_path += 1;
         }
         
-        if (this.where_in_path >= 0) {
+        if (this.where_in_path >= 0 && this.where_in_path < this.linestring.geometry.coordinates.length) {
             var coords = this.linestring.geometry.coordinates[this.where_in_path];
             this.currentpos = new Pos(coords[1], coords[0]);
             return coords;
@@ -97,5 +100,31 @@ function Actor(type, id) {
             return true;
             
         return false;
+    }
+}
+
+function NPCActor(id) {
+    this.icon = {
+        icon: L.divIcon({
+                className: 'couriericon ' + getColorNameFromId(id),
+                html: '',
+                iconSize: [15, 15]
+            })
+    };
+    
+    this.marker = null;
+    this.currentpos = null;
+    this.linestring = null;
+    
+    this.add_icon = function(map_utils) {
+        if (this.currentpos != null) {
+            this.marker = map_utils.add_icon(this.icon, this.currentpos.array());
+        }
+    }
+    
+    this.update_marker = function(lat, lng) {
+        if (this.marker != null) {
+            this.marker.setLatLng([lat, lng]);
+        }
     }
 }

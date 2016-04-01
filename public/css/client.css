@@ -79,3 +79,40 @@ path {
     stroke-dasharray:10000;
     -webkit-transition:stroke-dashoffset 4s;
 }
+
+.couriericon {
+    transition: all 0.25s linear;
+    width: 15px;
+    height: 15px;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+    line-height: 1.6em;
+    font-size: 0.8em;
+    font-weight: bold;
+    z-index: 999;
+}
+ 
+.couriericon.Blue {
+    background: #456E75;
+}
+ 
+.couriericon.Green {
+    background: #8F9957;
+}
+ 
+.couriericon.Orange {
+    background: #B87C51;
+}
+ 
+.couriericon.Red {
+    background: #B04548;
+}
+ 
+.couriericon.Purple {
+    background: #5C2E58;
+}
+
+.couriericon.Yellow {
+    background: #B3A800;
+}
