@@ -78,8 +78,8 @@ function cop_game_loop() {
     });
     
     function initialize_cop() {
-        // me = new Actor(COP, my_id);
-        // me.initialize(new Pos(37.796931, -122.265491), new Pos(37.78, -122.42));
+        me = new Actor(COP, my_id);
+        me.initialize(new Pos(37.796931, -122.265491), new Pos(37.78, -122.42));
         // me.get_directions(maputils, )
     }
 }
