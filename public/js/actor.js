@@ -75,14 +75,15 @@ function Actor(type, id) {
             this.currentpos = new Pos(coords[1], coords[0]);
             return coords;
         } else {
-            return Error("Path tracing is not initialized");
+            return null;
         }
     }
     
     this.update_marker = function() {
         if (this.marker != null) {
             var next_step = this.next_path_step();
-            this.marker.setLatLng(L.latLng([next_step[1], next_step[0]]));
+            if (next_step != null)
+                this.marker.setLatLng(L.latLng([next_step[1], next_step[0]]));
         } else {
             return Error("Path tracing not initialized");
         }

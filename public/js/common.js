@@ -61,9 +61,11 @@ function cop_game_loop() {
         socket.emit("new_cop_request", username);
     
     socket.on('cop_id', function(info) {
-       my_id = info["id"];
-       var thief_loc = info.thief_loc;
-       initialize_cop(thief_loc);
+        my_id = info["id"];
+        var thief_loc = info.thief_loc;
+       
+        if (thief_loc != null)
+        initialize_cop(thief_loc);
     });
     
     socket.on('no_room', function(msg) {
@@ -103,7 +105,6 @@ function cop_game_loop() {
     });
     
     function my_directions_updated() {
-        // maputils.draw_path(me.linestring);
         maputils.draw_new_path(me.id, me.path);
         socket.emit("cop_direction_changed", {"id": me.id, "linestring": me.linestring});
         
@@ -118,7 +119,7 @@ function cop_game_loop() {
     
     function update_my_frame() {
         me.update_marker();
-        maputils.panTo(me.currentpos.lat, me.currentpos.lng);
+        //maputils.panTo(me.currentpos.lat, me.currentpos.lng);
         socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
         if (!me.at_end_pt()) { moveStep = setTimeout(update_my_frame, 100); }
     }

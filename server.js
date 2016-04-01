@@ -20,6 +20,10 @@ app.get('/nt', function(req, res) {
     res.sendFile(__dirname + "/html/newthief.html");
 });
 
+app.get('/c', function(req, res) {
+    res.sendFile(__dirname + "/html/courier.html");
+})
+
 var userData = function(name) {
     this.name = name;
     this.id = null;
@@ -70,7 +74,8 @@ io.on('connection', function(socket) {
     
     socket.on('thief_loc', function(user_data) {
         thief_loc = user_data;
-        socket.broadcast.emit('thief_loc', user_data); 
+        if (thief_loc != null)
+            socket.broadcast.emit('thief_loc', user_data); 
     });
     
     socket.on('cop_loc', function(user_data) {

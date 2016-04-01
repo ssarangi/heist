@@ -40,5 +40,7 @@ function MapUtils(map, access_token) {
         $('.'+ color_name + 'path').remove();
         var courierRoute = 
             L.polyline(processedCoords, {color: "#"+ color_val, className: color_name + 'path'}).addTo(this.map);
+            
+        $('path').css('stroke-dashoffset',0)
     }
 }
