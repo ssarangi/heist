@@ -204,10 +204,9 @@ function cop_game_loop() {
                  var distance = maputils.distance(thief_pos, me.currentpos);
                  if (distance < 0.01)
                  {
-                     var cop_wins = "Cop " + my_id + " wins!";
-                     socket.emit("cop_won", cop_wins);
+                     socket.emit('cop_won', my_id);
                      game_over = true;
-                    //  alert(cop_wins);
+                     document.getElementById('features').innerHTML = "You caught the thief! \nGame Over.";
                  }
              }
          }
