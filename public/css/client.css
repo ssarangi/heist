@@ -116,3 +116,17 @@ path {
 .couriericon.Yellow {
     background: #B3A800;
 }
+
+img {
+  max-width:100%;
+  vertical-align:top;
+  }
+
+.center img,
+img.center { margin-left:auto; margin-right:auto; }
+
+.hq {
+    width:20px;
+    border-radius:50%;
+    box-shadow: 0 0px 6px rgba(0,0,0,.25);
+}

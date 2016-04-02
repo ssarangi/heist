@@ -37,6 +37,7 @@ var users_id_map = {}
 var cops = {}
 
 var thief_loc = null;
+var goal_pt = null;
 
 function Queue() {
     this._oldestIndex = 1;
@@ -115,6 +116,11 @@ io.on('connection', function(socket) {
         socket.broadcast.emit('cop_loc', user_data);
     });
     
+    socket.on('thief_goal_pt', function(user_data) {
+        goal_pt = user_data;
+        socket.broadcast.emit('thief_goal_pt', user_data); 
+    });
+    
     socket.on('cop_direction_changed', function(user_data) {
         socket.broadcast.emit('cop_direction_changed', user_data); 
     });
@@ -125,8 +131,12 @@ io.on('connection', function(socket) {
         } else {
             var id = cops_id_queue.dequeue();
             cops[this.id] = id;
-            socket.emit("cop_id", {"id": id, "thief_loc": thief_loc});
+            socket.emit("cop_id", {"id": id, "thief_loc": thief_loc, "goal_pt": goal_pt});
         }
+    });
+    
+    socket.on('thief_won', function(txt) {
+       socket.broadcast.emit('thief_won'); 
     });
 })
 

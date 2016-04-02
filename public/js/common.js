@@ -3,7 +3,7 @@ this.access_token = 'pk.eyJ1Ijoic3NhcmFuZ2kxMjMiLCJhIjoiY2ltOWpmeno4MDNwNHRubTZo
 L.mapbox.accessToken = this.access_token;
 
 // Globals for the Mapbox server
-var map = L.mapbox.map('map', 'peterqliu.39d14f8b',{'scrollWheelZoom':true})
+var map = L.mapbox.map('map', 'mapbox.light',{'scrollWheelZoom':true})
               .setView([37.8, -96], 14);
 
 var maputils = new MapUtils(map, this.access_token);
@@ -24,8 +24,62 @@ socket.on('cop_loc', function(user_data) {
     cop_markers[id].update_marker(lat, lng);
 });
 
+socket.on('thief_won', function(msg) {
+    alert("Thief Won the game");
+});
+
+socket.on('thief_goal_pt', function(user_data) {
+    var pos = new Pos(user_data['lat'], user_data['lng']);
+    maputils.add_goal_pt(pos);
+});
+
+function get_N_random_numbers(N, endIdx) {
+    var unique_indexes = {};
+    if (endIdx > N){
+        while (Object.keys(unique_indexes).length < N){
+            var rand = Math.floor(Math.random() * (endIdx + 1));
+            if (!(rand in unique_indexes)){
+                unique_indexes[rand] = rand;
+            }
+        }
+    }
+    else {
+        for (var i = 0; i <= endIdx; i++){
+            unique_indexes[i] = i;
+        }
+    }
+    return unique_indexes;
+}
+
+function generate_position_within_radius(pos, radius) {
+   var center_feature = {
+        'type' : 'Features',
+        "properties": {},
+        'geometry' : {
+            'type' : 'Point',
+            'coordinates' : [pos.lng, pos.lat]
+        },
+        'properties' : {
+            'name' : 'Thief Loc'
+        }
+    };
+    
+    var one_mile_out = turf.buffer(center_feature, radius, 'miles');
+    var features = one_mile_out['features']
+    var geometry = features[0]['geometry']
+    var list_of_points = geometry['coordinates'][0]
+    var random_indexes = get_N_random_numbers(1, list_of_points.length);
+    
+    for (var key in random_indexes) {
+        var coords = list_of_points[random_indexes[key]];
+        var point = new Pos(coords[1], coords[0]);
+        return point;
+    }
+}
+
 function thief_game_loop() {
     var moveStep;
+    var start_pt = new Pos(37.796931, -122.265491);
 
     function thief_directions_updated() {
         maputils.draw_path(this.thief.linestring);
@@ -38,21 +92,36 @@ function thief_game_loop() {
         update_frame();
     }
 
+    var goal_pt = generate_position_within_radius(start_pt, 15);
+    maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
+        var len = data.routes[0].geometry.coordinates.length;
+        var coords = data.routes[0].geometry.coordinates[len - 1];
+        goal_pt = new Pos(coords[1], coords[0]);
+        socket.emit("thief_goal_pt", {"lat": goal_pt.lat, "lng": goal_pt.lng });
+        maputils.add_goal_pt(goal_pt);
+    });
+    
     // Initialize the Actor. In this case, a new thief first
     this.thief = new Actor(THIEF, 0);
-    this.thief.initialize(new Pos(37.796931, -122.265491), new Pos(37.78, -122.42));
+    this.thief.initialize(start_pt, goal_pt);
     this.thief.get_directions(maputils, thief_directions_updated);
     
     function update_frame() {
         this.thief.update_marker();
         maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
         socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
-        if (!this.thief.at_end_pt()) { 
+        if (!this.thief.at_end_pt(maputils)) { 
             moveStep = setTimeout(update_frame, 100);
         } else {
-            this.thief.currentpos = this.thief.startpoint;
-            this.thief.reset();
-            moveStep = setTimeout(update_frame, 100);
+            var distance = maputils.distance(this.thief.currentpos, goal_pt);
+            if (distance < 0.05) {
+                socket.emit("thief_won", "");
+                alert("Thief Won");
+            } else {
+                this.thief.currentpos = this.thief.startpoint;
+                this.thief.reset();
+                moveStep = setTimeout(update_frame, 100);
+            }
         }
     }
     
@@ -75,50 +144,6 @@ function cop_game_loop() {
     var moveStep;
     var user_clicked = false;
 
-    function get_N_random_numbers(N, endIdx) {
-        var unique_indexes = {};
-        if (endIdx > N){
-            while (Object.keys(unique_indexes).length < N){
-                var rand = Math.floor(Math.random() * (endIdx + 1));
-                if (!(rand in unique_indexes)){
-                    unique_indexes[rand] = rand;
-                }
-            }
-        }
-        else {
-            for (var i = 0; i <= endIdx; i++){
-                unique_indexes[i] = i;
-            }
-        }
-        return unique_indexes;
-    }
-
-    function generate_cop_starting_position(thief_pos) {
-       var center_feature = {
-            'type' : 'Features',
-            "properties": {},
-            'geometry' : {
-                'type' : 'Point',
-                'coordinates' : [thief_pos.lng, thief_pos.lat]
-            },
-            'properties' : {
-                'name' : 'Thief Loc'
-            }
-        };
-        
-        var one_mile_out = turf.buffer(center_feature, 1, 'miles');
-        var features = one_mile_out['features']
-        var geometry = features[0]['geometry']
-        var list_of_points = geometry['coordinates'][0]
-        var random_indexes = get_N_random_numbers(1, list_of_points.length);
-        
-        for (var key in random_indexes) {
-            var coords = list_of_points[random_indexes[key]];
-            var cop_starting_point = new Pos(coords[1], coords[0]);
-            return cop_starting_point;
-        }
-    }
-
     // Emit a new request
     if (my_id == null)
         socket.emit("new_cop_request", username);
@@ -126,9 +151,10 @@ function cop_game_loop() {
     socket.on('cop_id', function(info) {
         my_id = info["id"];
         var thief_loc = info.thief_loc;
+        var goal_pt = info.goal_pt;
        
         if (thief_loc != null) {
-            initialize_cop(thief_loc);
+            initialize_cop(thief_loc, goal_pt);
         }
     });
     
@@ -170,7 +196,7 @@ function cop_game_loop() {
         me.update_marker();
         maputils.panTo(me.currentpos.lat, me.currentpos.lng);
         socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
-        if (!me.at_end_pt()) {
+        if (!me.at_end_pt(maputils)) {
             moveStep = setTimeout(update_my_frame, 100);
         } else if (user_clicked == false) {
             me.endpoint = thief.currentpos;
@@ -179,13 +205,14 @@ function cop_game_loop() {
         }
     }
     
-    function initialize_cop(thief_loc) {
+    function initialize_cop(thief_loc, goal_pt) {
         me = new Actor(COP, my_id);
         var thief_pos = new Pos(thief_loc["lat"], thief_loc["lng"]);
         maputils.panTo(thief_pos.lat, thief_pos.lng);
 
-        var cop_pos = generate_cop_starting_position(thief_pos)
+        var cop_pos = generate_position_within_radius(thief_pos, 1);
         me.initialize(cop_pos, thief_pos);
+        maputils.add_goal_pt(goal_pt);
         me.get_directions(maputils, my_directions_updated);
     }
     

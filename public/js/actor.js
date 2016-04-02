@@ -78,10 +78,14 @@ function Actor(type, id) {
         if (this.path != null) {
             this.increment++;
         }
-       
-        var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
-        this.currentpos = new Pos(waypoint[1], waypoint[0]);
-        return waypoint;
+        
+        try {
+            var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
+            this.currentpos = new Pos(waypoint[1], waypoint[0]);
+            return waypoint;
+        } catch (err) {
+            console.log(err.message);
+        }
     }
     
     this.update_marker = function() {
@@ -101,33 +105,8 @@ function Actor(type, id) {
         }
     }
     
-    this.at_end_pt = function() {
-        var point1 = {
-          "type": "Feature",
-          "properties": {},
-          "geometry": {
-            "type": "Point",
-            "coordinates": [this.currentpos.lng, this.currentpos.lat]
-          }
-        };
-
-        var point2 = {
-          "type": "Feature",
-          "properties": {},
-          "geometry": {
-            "type": "Point",
-            "coordinates": [this.endpoint.lng, this.endpoint.lat]
-          }
-        };
-        
-        var units = "miles";
-
-        var points = {
-            "type": "FeatureCollection",
-            "features": [point1, point2]
-        };
-
-        var distance = turf.distance(point1, point2, units);
+    this.at_end_pt = function(maputils) {
+        var distance = maputils.distance(this.currentpos, this.endpoint);
         if (distance < 0.03)
         {
             this.currentpos = this.endpoint;
