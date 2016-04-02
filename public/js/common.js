@@ -9,6 +9,7 @@ var map = L.mapbox.map('map', 'mapbox.light',{'scrollWheelZoom':true})
 var maputils = new MapUtils(map, this.access_token);
 var socket = io();
 var cop_markers = {}
+var game_over = false;
 
 socket.on('cop_loc', function(user_data) {
     var id = user_data['id'];
@@ -25,10 +26,12 @@ socket.on('cop_loc', function(user_data) {
 });
 
 socket.on('thief_won', function(msg) {
+    game_over = true;
     document.getElementById('features').innerHTML = "Thief reached his destination. \nGame Over.";
 });
 
 socket.on('cop_won', function(msg) {
+    game_over = true;
     document.getElementById('features').innerHTML = "Cop (wyho) caught up with the thief. \nGame Over.";
 });
 
@@ -87,7 +90,7 @@ function generate_position_within_radius(pos, radius) {
 function thief_game_loop() {
     var moveStep;
     var start_pt = new Pos(37.796931, -122.265491);
-    var game_over = false;
+    // var game_over = false;
 
     function thief_directions_updated() {
         maputils.draw_path(this.thief.linestring);
@@ -162,7 +165,7 @@ function cop_game_loop() {
     var thief = null;
     var moveStep;
     var user_clicked = false;
-    var game_over = false;
+    // var game_over = false;
 
     // Emit a new request
     if (my_id == null)
