@@ -32,7 +32,7 @@ socket.on('thief_won', function(msg) {
 
 socket.on('cop_won', function(msg) {
     game_over = true;
-    document.getElementById('features').innerHTML = "Cop (wyho) caught up with the thief. \nGame Over.";
+    document.getElementById('features').innerHTML = "Cop " + msg + " caught up with the thief. \nGame Over.";
 });
 
 

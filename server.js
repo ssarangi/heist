@@ -140,7 +140,7 @@ io.on('connection', function(socket) {
     });
     
     socket.on('cop_won', function(txt) {
-       socket.broadcast.emit(txt); 
+       socket.broadcast.emit('cop_won',txt); 
     });
 })
 
