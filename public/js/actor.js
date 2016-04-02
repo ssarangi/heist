@@ -19,7 +19,9 @@ function Actor(type, id) {
     this.trip_duration = null;
     this.increment = 0;
     this.pollingInterval = 10;
-    
+    this.direction_src_added = false;
+    this.direction_src = null;
+
     this.reset = function() {
         this.startpoint = this.currentpos;
         this.increment = 0;
@@ -31,14 +33,46 @@ function Actor(type, id) {
         var end_pt = actor.endpoint;
         
         map_utils.get_directions([start_pt.lng, start_pt.lat], [end_pt.lng, end_pt.lat], function(data) {
-            actor.path = data.routes[0]['geometry']['coordinates'];
+            actor.path = data.routes[0].geometry.coordinates;
             actor.trip_distance = data.routes[0].distance;
             actor.trip_duration = (data.routes[0].duration/(60*3.2)).toFixed(0);
-            // actor.path = data.routes[0].geometry.coordinates;
+            var geoJSON = {
+                                "type": "Feature",
+                                "properties": {},
+                                "geometry": {
+                                    "type": "LineString",
+                                    "coordinates": actor.path
+                                }
+                          };
+
+            if (!actor.direction_src_added) {
+                actor.direction_src = new mapboxgl.GeoJSONSource({ "data": geoJSON });
+
+                map.addSource("route_" + actor.id, actor.direction_src);
+
+                map.addLayer({
+                    "id": "route_" + actor.id,
+                    "type": "line",
+                    "source": "route_" + actor.id,
+                    "layout": {
+                        "line-join": "round",
+                        "line-cap": "round"
+                    },
+                    "paint": {
+                        "line-color": getColorHexFromId(actor.id),
+                        "line-width": 4
+                    }
+                });
+
+                actor.direction_src_added = true;
+            }
+
+            actor.direction_src.setData(geoJSON);
             actor.linestring = turf.linestring(actor.path, {
                   "stroke": "#" + getColorHexFromId(actor.id),
                   "stroke-width": 4
             });
+
             on_complete();
         });
     }
@@ -118,6 +152,8 @@ function NPCActor(id) {
     this.currentpos = null;
     this.currentpossrc = null;
     this.internal_current_pos = null;
+    this.direction_src_added = false;
+    this.direction_src = null;
 
     this.linestring = null;
 
@@ -155,5 +191,40 @@ function NPCActor(id) {
         this.internal_current_pos.coordinates[0] = new_pos.lng;
         this.internal_current_pos.coordinates[1] = new_pos.lat;
         this.currentpossrc.setData(this.internal_current_pos);
-    }    
+    }
+
+    this.draw_path = function(path) {
+        var geoJSON = {
+                    "type": "Feature",
+                    "properties": {},
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": path
+                    }
+              };
+
+        if (!this.direction_src_added) {
+            this.direction_src = new mapboxgl.GeoJSONSource({ "data": geoJSON });
+
+            map.addSource("route_" + this.id, this.direction_src);
+
+            map.addLayer({
+                "id": "route_" + this.id,
+                "type": "line",
+                "source": "route_" + this.id,
+                "layout": {
+                    "line-join": "round",
+                    "line-cap": "round"
+                },
+                "paint": {
+                    "line-color": getColorHexFromId(this.id),
+                    "line-width": 4
+                }
+            });
+
+            this.direction_src_added = true;
+        }
+
+        this.direction_src.setData(geoJSON);
+    }
 }

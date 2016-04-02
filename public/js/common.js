@@ -87,8 +87,7 @@ function thief_game_loop() {
     var start_pt = new mapboxgl.LngLat(-122.265491, 37.796931);
 
     function thief_directions_updated() {
-        maputils.draw_path(thief.linestring);
-        thief.add_icon(maputils);
+        // maputils.draw_path(thief.linestring);
         
         // Move the map to where the thief is.
         maputils.panTo(thief.startpoint.lat, thief.startpoint.lng);
@@ -129,6 +128,7 @@ function thief_game_loop() {
         // Initialize the Actor. In this case, a new thief first
         thief = new Actor(THIEF, 0);
         thief.initialize(start_pt, goal_pt);
+        thief.add_icon(maputils);
         thief.get_directions(maputils, thief_directions_updated);
 
         socket.on("cop_loc", cop_location_changed);
@@ -136,7 +136,7 @@ function thief_game_loop() {
     
     map.on('click', function(e) {
         window.clearTimeout(moveStep);
-        thief.endpoint = new mapboxgl.LngLat(e['lngLat']['lat'], e['lngLat']['lng']);
+        thief.endpoint = new mapboxgl.LngLat(e['lngLat']['lng'], e['lngLat']['lat']);
         thief.reset();
         maputils.clearPath();
         thief.get_directions(maputils, thief_directions_updated);
@@ -166,6 +166,8 @@ function cop_game_loop() {
             }
         });
 
+        socket.on("cop_loc", cop_location_changed);
+
         socket.on('no_room', function(msg) {
             alert("No more room on Server. Try again later!!!");
         });
@@ -184,7 +186,7 @@ function cop_game_loop() {
         socket.on('cop_direction_changed', function(user_data) {
             var id = user_data['id'];
             var path = user_data['path'];
-            maputils.draw_new_path(id, path);
+            cop_markers[id].draw_path(path);
         });
         
         function my_directions_updated() {
