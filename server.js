@@ -138,6 +138,10 @@ io.on('connection', function(socket) {
     socket.on('thief_won', function(txt) {
        socket.broadcast.emit('thief_won'); 
     });
+    
+    socket.on('cop_won', function(txt) {
+       socket.broadcast.emit("Cop won"); 
+    });
 })
 
 http.listen(port, ip, function() {

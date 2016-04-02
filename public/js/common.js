@@ -25,8 +25,13 @@ socket.on('cop_loc', function(user_data) {
 });
 
 socket.on('thief_won', function(msg) {
-    alert("Thief Won the game");
+     alert("Thief Won the game");
 });
+
+socket.on('cop_won', function(msg) {
+    alert("Cop some guy won");
+});
+
 
 socket.on('thief_goal_pt', function(user_data) {
     var pos = new Pos(user_data['lat'], user_data['lng']);
@@ -80,6 +85,7 @@ function generate_position_within_radius(pos, radius) {
 function thief_game_loop() {
     var moveStep;
     var start_pt = new Pos(37.796931, -122.265491);
+    var game_over = false;
 
     function thief_directions_updated() {
         maputils.draw_path(this.thief.linestring);
@@ -92,7 +98,7 @@ function thief_game_loop() {
         update_frame();
     }
 
-    var goal_pt = generate_position_within_radius(start_pt, 15);
+    var goal_pt = generate_position_within_radius(start_pt, 5);
     maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
         var len = data.routes[0].geometry.coordinates.length;
         var coords = data.routes[0].geometry.coordinates[len - 1];
@@ -101,26 +107,33 @@ function thief_game_loop() {
         maputils.add_goal_pt(goal_pt);
     });
     
+    // socket.on('cop_won', function(msg) {
+    //     game_over = true;
+    //     alert(msg);
+    // });
+    
     // Initialize the Actor. In this case, a new thief first
     this.thief = new Actor(THIEF, 0);
     this.thief.initialize(start_pt, goal_pt);
     this.thief.get_directions(maputils, thief_directions_updated);
     
     function update_frame() {
-        this.thief.update_marker();
-        maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
-        socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
-        if (!this.thief.at_end_pt(maputils)) { 
-            moveStep = setTimeout(update_frame, 100);
-        } else {
-            var distance = maputils.distance(this.thief.currentpos, goal_pt);
-            if (distance < 0.05) {
-                socket.emit("thief_won", "");
-                alert("Thief Won");
-            } else {
-                this.thief.currentpos = this.thief.startpoint;
-                this.thief.reset();
+        if(!game_over){
+            this.thief.update_marker();
+            maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
+            socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
+            if (!this.thief.at_end_pt(maputils)) { 
                 moveStep = setTimeout(update_frame, 100);
+            } else {
+                var distance = maputils.distance(this.thief.currentpos, goal_pt);
+                if (distance < 0.05) {
+                    socket.emit("thief_won", "");
+                    alert("Thief Won");
+                } else {
+                    this.thief.currentpos = this.thief.startpoint;
+                    this.thief.reset();
+                    moveStep = setTimeout(update_frame, 100);
+                }
             }
         }
     }
@@ -143,6 +156,7 @@ function cop_game_loop() {
     var thief = null;
     var moveStep;
     var user_clicked = false;
+    var game_over = false;
 
     // Emit a new request
     if (my_id == null)
@@ -158,6 +172,11 @@ function cop_game_loop() {
         }
     });
     
+    // socket.on('cop_won', function(msg) {
+    //     game_over = true;
+    //     alert(msg);
+    // });
+    
     socket.on('no_room', function(msg) {
         alert("No more room on Server. Try again later!!!");
     });
@@ -167,10 +186,23 @@ function cop_game_loop() {
              thief = new Actor(THIEF, 0);
              thief.startpoint = new Pos(loc["lat"], loc["lng"]);
              thief.add_icon(maputils);
-        }
-
-         var pos = new Pos(loc["lat"], loc["lng"]);
-         thief.update_networked_marker(loc);
+         }
+          
+         var thief_pos = new Pos(loc["lat"], loc["lng"]);
+         if (!game_over){
+             if (me != null && me.currentpos != null) {
+                 var distance = maputils.distance(thief_pos, me.currentpos);
+                 if (distance < 0.01)
+                 {
+                     var cop_wins = "Cop " + my_id + " wins!";
+                     socket.emit("cop_won", cop_wins);
+                     game_over = true;
+                     alert(cop_wins);
+                 }
+             }
+         }
+         
+         thief.update_networked_marker(thief_pos);
     });
     
     socket.on('cop_direction_changed', function(user_data) {
@@ -193,15 +225,17 @@ function cop_game_loop() {
     }
     
     function update_my_frame() {
-        me.update_marker();
-        maputils.panTo(me.currentpos.lat, me.currentpos.lng);
-        socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
-        if (!me.at_end_pt(maputils)) {
-            moveStep = setTimeout(update_my_frame, 100);
-        } else if (user_clicked == false) {
-            me.endpoint = thief.currentpos;
-            me.reset();
-            me.get_directions(maputils, my_directions_updated);
+        if(!game_over){
+            me.update_marker();
+            maputils.panTo(me.currentpos.lat, me.currentpos.lng);
+            socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
+            if (!me.at_end_pt(maputils)) {
+                moveStep = setTimeout(update_my_frame, 100);
+            } else if (user_clicked == false) {
+                me.endpoint = thief.currentpos;
+                me.reset();
+                me.get_directions(maputils, my_directions_updated);
+            }
         }
     }
     
@@ -210,7 +244,7 @@ function cop_game_loop() {
         var thief_pos = new Pos(thief_loc["lat"], thief_loc["lng"]);
         maputils.panTo(thief_pos.lat, thief_pos.lng);
 
-        var cop_pos = generate_position_within_radius(thief_pos, 1);
+        var cop_pos = generate_position_within_radius(thief_pos, 0.5);
         me.initialize(cop_pos, thief_pos);
         maputils.add_goal_pt(goal_pt);
         me.get_directions(maputils, my_directions_updated);

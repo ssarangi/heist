@@ -10,8 +10,6 @@ function Pos(lat, lng) {
 var THIEF = 0;
 var COP = 1
 
-// http://www.livetrain.nyc/
-
 function Actor(type, id) {
     var icon_txt = id;
     if (type == THIEF) {
@@ -28,7 +26,7 @@ function Actor(type, id) {
         icon: L.divIcon({
                 className: 'couriericon ',
                 html: '<img class="hq" src="../img/police.png">',
-                iconSize: [30, 30]
+                iconSize: [40, 40]
             })
     };
     }
