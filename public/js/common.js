@@ -5,7 +5,7 @@ L.mapbox.accessToken = this.access_token;
 // Globals for the Mapbox server
 var map = L.mapbox.map('map', 'peterqliu.39d14f8b',{'scrollWheelZoom':true})
               .setView([37.8, -96], 14);
-              
+
 var maputils = new MapUtils(map, this.access_token);
 var socket = io();
 
@@ -61,6 +61,73 @@ function cop_game_loop() {
     var moveStep;
 
     var cop_markers = {}
+
+    // filters away the points which are not on roads
+    function filter_unreasonable_points(list_of_points){
+        var filtered_points = [];
+        var parks = "parks";
+        var water = "water";
+        var road = "road";
+        for (var i = 0; i < list_of_points.length; i++){
+            var coords = list_of_points[i];
+            var point = mapgl.project({'lng': coords[0], 'lat': coords[1]});
+            var features = mapgl.queryRenderedFeatures(point);
+            for(var j = 0; j < features.length; j++){
+                var obj = features[j]['layer']['id'];
+                // if(obj.indexOf(parks) == -1 && obj.indexOf(water) == -1){
+                //     filtered_points.push(list_of_points[i]);
+                // }
+                if(obj.indexOf(road) > -1){
+                    filtered_points.push(list_of_points[i]);
+                }
+            }
+        }
+        return filtered_points;
+    }
+    
+    function get_N_random_numbers(N, endIdx) {
+        var unique_indexes = {};
+        if (endIdx > N){
+            while (Object.keys(unique_indexes).length < N){
+                var rand = Math.floor(Math.random() * (endIdx + 1));
+                if (!(rand in unique_indexes)){
+                    unique_indexes[rand] = rand;
+                }
+            }
+        }
+        else {
+            for (var i = 0; i <= endIdx; i++){
+                unique_indexes[i] = i;
+            }
+        }
+        return unique_indexes;
+    }
+
+    function generate_cop_starting_position(thief_pos) {
+       var center_feature = {
+            'type' : 'Features',
+            "properties": {},
+            'geometry' : {
+                'type' : 'Point',
+                'coordinates' : [thief_pos.lng, thief_pos.lat]
+            },
+            'properties' : {
+                'name' : 'Thief Loc'
+            }
+        };
+        
+        var one_mile_out = turf.buffer(center_feature, 1, 'miles');
+        var features = one_mile_out['features']
+        var geometry = features[0]['geometry']
+        var list_of_points = geometry['coordinates'][0]
+        var random_indexes = get_N_random_numbers(1, list_of_points.length);
+        
+        for (var key in random_indexes) {
+            var coords = list_of_points[random_indexes[key]];
+            var cop_starting_point = new Pos(coords[1], coords[0]);
+            return cop_starting_point;
+        }
+    }
 
     // Emit a new request
     if (my_id == null)
@@ -132,7 +199,11 @@ function cop_game_loop() {
     
     function initialize_cop(thief_loc) {
         me = new Actor(COP, my_id);
-        me.initialize(new Pos(37.796931, -122.265491), new Pos(thief_loc["lat"], thief_loc["lng"]));
+        var thief_pos = new Pos(thief_loc["lat"], thief_loc["lng"]);
+        maputils.panTo(thief_pos.lat, thief_pos.lng);
+
+        var cop_pos = generate_cop_starting_position(thief_pos)
+        me.initialize(cop_pos, thief_pos);
         me.get_directions(maputils, my_directions_updated);
     }
     
