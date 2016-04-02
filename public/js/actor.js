@@ -5,6 +5,10 @@ function Pos(lat, lng) {
     this.array = function() {
         return [this.lat, this.lng];
     }
+    
+    this.LngLat = function() {
+        return mapboxgl.LngLat(this.lng, this.lat);
+    }
 }
 
 var THIEF = 0;
@@ -13,20 +17,18 @@ var COP = 1
 // http://www.livetrain.nyc/
 
 function Actor(type, id) {
-    var icon_txt = id;
-    if (type == THIEF) {
-        icon_txt = "T";
-    }
-    this.icon = {
-        icon: L.divIcon({
-                className: 'couriericon ' + getColorNameFromId(id),
-                html: icon_txt,
-                iconSize: [15, 15]
-            })
-    };
+    // this.icon = {
+    //     icon: L.divIcon({
+    //             className: 'couriericon ' + getColorNameFromId(id),
+    //             html: '',
+    //             iconSize: [15, 15]
+    //         })
+    // };
     this.marker = null;
     
     this.currentpos = null;
+    this.currentpossrc = null;
+    this.internal_current_pos = null;
     this.startpoint = null;
     this.endpoint = null;
     this.path = null;
@@ -64,13 +66,36 @@ function Actor(type, id) {
     
     this.initialize = function(startpoint, endpoint) {
         this.currentpos = startpoint;
+        this.internal_current_pos = {
+            "type": "Point",
+            "coordinates": [this.currentpos.lng, this.currentpos.lat],
+        };
+
+        // add the GeoJSON above to a new vector tile source
+        this.currentpossrc = new mapboxgl.GeoJSONSource({
+            data: this.internal_current_pos
+        });
+        
         this.startpoint = startpoint;
         this.endpoint = endpoint;
     }
     
     this.add_icon = function(map_utils) {
         if (this.marker == null) {
-            this.marker = map_utils.add_icon(this.icon, this.startpoint.array());
+            // this.marker = map_utils.add_icon(this.icon, this.startpoint.array());
+            var actor_id = "actor_" + this.id;
+            map_utils.map.addSource(actor_id, this.currentpossrc);
+            map_utils.map.addLayer({
+                "id": actor_id,
+                "type": "circle",
+                "source": actor_id,
+                "paint": {
+                    "circle-radius": 10,
+                    "circle-color": getColorHexFromId(this.id),
+                    "circle-opacity": 1.0
+                }
+            });
+            this.marker = true;
         }
     }
     
@@ -78,21 +103,18 @@ function Actor(type, id) {
         if (this.path != null) {
             this.increment++;
         }
-        
-        try {
-            var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
-            this.currentpos = new Pos(waypoint[1], waypoint[0]);
-            return waypoint;
-        } catch (err) {
-            console.log(err.message);
-        }
+       
+        var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
+        this.update_current_pos(new mapboxgl.LngLat(waypoint[0], waypoint[1]));
+        return waypoint;
     }
     
     this.update_marker = function() {
         if (this.marker != null) {
             var next_step = this.next_path_step();
-            if (next_step != null)
-                this.marker.setLatLng(L.latLng([next_step[1], next_step[0]]));
+            if (next_step != null) {
+                // this.marker.setLatLng(L.latLng([next_step[1], next_step[0]]));
+            }
         } else {
             return Error("Path tracing not initialized");
         }
@@ -105,8 +127,33 @@ function Actor(type, id) {
         }
     }
     
-    this.at_end_pt = function(maputils) {
-        var distance = maputils.distance(this.currentpos, this.endpoint);
+    this.at_end_pt = function() {
+        var point1 = {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [this.currentpos.lng, this.currentpos.lat]
+          }
+        };
+
+        var point2 = {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [this.endpoint.lng, this.endpoint.lat]
+          }
+        };
+        
+        var units = "miles";
+
+        var points = {
+            "type": "FeatureCollection",
+            "features": [point1, point2]
+        };
+
+        var distance = turf.distance(point1, point2, units);
         if (distance < 0.03)
         {
             this.currentpos = this.endpoint;
@@ -115,15 +162,20 @@ function Actor(type, id) {
         }
         return false;
     }
+    
+    this.update_current_pos = function(new_pos) {
+        this.currentpos = new_pos;
+        this.internal_current_pos.coordinates[0] = new_pos.lng;
+        this.internal_current_pos.coordinates[1] = new_pos.lat;
+        this.currentpossrc.setData(this.internal_current_pos);
+    }
 }
 
 function NPCActor(id) {
-    var icon_txt = id;
-
     this.icon = {
         icon: L.divIcon({
                 className: 'couriericon ' + getColorNameFromId(id),
-                html: icon_txt,
+                html: '',
                 iconSize: [15, 15]
             })
     };
@@ -142,5 +194,11 @@ function NPCActor(id) {
         if (this.marker != null) {
             this.marker.setLatLng([lat, lng]);
         }
+    }
+    
+    this.update_current_pos = function(new_pos) {
+        this.currentpos = new_pos;
+        this.internal_current_pos.coordinates[0] = new_pos.lng;
+        this.internal_current_pos.coordinates[1] = new_pos.lat;
     }
 }
