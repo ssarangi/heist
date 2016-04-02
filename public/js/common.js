@@ -25,11 +25,11 @@ socket.on('cop_loc', function(user_data) {
 });
 
 socket.on('thief_won', function(msg) {
-     alert("Thief Won the game");
+    document.getElementById('features').innerHTML = "Thief reached his destination. \nGame Over.";
 });
 
 socket.on('cop_won', function(msg) {
-    alert("Cop some guy won");
+    document.getElementById('features').innerHTML = "Cop (wyho) caught up with the thief. \nGame Over.";
 });
 
 
@@ -82,6 +82,8 @@ function generate_position_within_radius(pos, radius) {
     }
 }
 
+
+//-------------------------------THIEF LOOP----------------------------------------------
 function thief_game_loop() {
     var moveStep;
     var start_pt = new Pos(37.796931, -122.265491);
@@ -98,7 +100,7 @@ function thief_game_loop() {
         update_frame();
     }
 
-    var goal_pt = generate_position_within_radius(start_pt, 5);
+    var goal_pt = generate_position_within_radius(start_pt, 2);
     maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
         var len = data.routes[0].geometry.coordinates.length;
         var coords = data.routes[0].geometry.coordinates[len - 1];
@@ -128,7 +130,8 @@ function thief_game_loop() {
                 var distance = maputils.distance(this.thief.currentpos, goal_pt);
                 if (distance < 0.05) {
                     socket.emit("thief_won", "");
-                    alert("Thief Won");
+                    // alert("Thief Won");
+                    document.getElementById('features').innerHTML = "Thief reached his destination. \nGame Over.";
                 } else {
                     this.thief.currentpos = this.thief.startpoint;
                     this.thief.reset();
@@ -146,9 +149,12 @@ function thief_game_loop() {
         thief.reset();
         maputils.clearPath();
         thief.get_directions(maputils, thief_directions_updated);
+        document.getElementById('features').innerHTML = "Thief changed direction";
     });
 }
 
+
+//-------------------------------COP LOOP----------------------------------------------
 function cop_game_loop() {
     var username = "myname";
     var my_id = null;
@@ -178,7 +184,8 @@ function cop_game_loop() {
     // });
     
     socket.on('no_room', function(msg) {
-        alert("No more room on Server. Try again later!!!");
+        document.getElementById('features').innerHTML = "No more room on Server. Try again later!!!"
+        // alert("No more room on Server. Try again later!!!");
     });
     
     socket.on('thief_loc', function(loc) {
@@ -197,7 +204,7 @@ function cop_game_loop() {
                      var cop_wins = "Cop " + my_id + " wins!";
                      socket.emit("cop_won", cop_wins);
                      game_over = true;
-                     alert(cop_wins);
+                    //  alert(cop_wins);
                  }
              }
          }
