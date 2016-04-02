@@ -8,11 +8,11 @@ var colors = {
 };
 
 var IDToStyle = {
-    "0": "Yellow",
+    "0": "Red",
     "1": "Blue",
     "2": "Green",
     "3": "Orange",
-    "4": "Red",
+    "4": "Yellow",
     "5": "Purple",
 }
 

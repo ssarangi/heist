@@ -13,10 +13,14 @@ var COP = 1
 // http://www.livetrain.nyc/
 
 function Actor(type, id) {
+    var icon_txt = id;
+    if (type == THIEF) {
+        icon_txt = "T";
+    }
     this.icon = {
         icon: L.divIcon({
                 className: 'couriericon ' + getColorNameFromId(id),
-                html: '',
+                html: icon_txt,
                 iconSize: [15, 15]
             })
     };

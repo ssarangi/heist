@@ -8,7 +8,21 @@ var map = L.mapbox.map('map', 'peterqliu.39d14f8b',{'scrollWheelZoom':true})
 
 var maputils = new MapUtils(map, this.access_token);
 var socket = io();
+var cop_markers = {}
 
+socket.on('cop_loc', function(user_data) {
+    var id = user_data['id'];
+    var lat = user_data['lat'];
+    var lng = user_data['lng'];
+    
+    if (!(id in cop_markers)) {
+        cop_markers[id] = new NPCActor(id);
+        cop_markers[id].currentpos = new Pos(lat, lng);
+        cop_markers[id].add_icon(maputils);
+    }
+    
+    cop_markers[id].update_marker(lat, lng);
+});
 
 function thief_game_loop() {
     var moveStep;
@@ -60,31 +74,6 @@ function cop_game_loop() {
     var thief = null;
     var moveStep;
 
-    var cop_markers = {}
-
-    // filters away the points which are not on roads
-    function filter_unreasonable_points(list_of_points){
-        var filtered_points = [];
-        var parks = "parks";
-        var water = "water";
-        var road = "road";
-        for (var i = 0; i < list_of_points.length; i++){
-            var coords = list_of_points[i];
-            var point = mapgl.project({'lng': coords[0], 'lat': coords[1]});
-            var features = mapgl.queryRenderedFeatures(point);
-            for(var j = 0; j < features.length; j++){
-                var obj = features[j]['layer']['id'];
-                // if(obj.indexOf(parks) == -1 && obj.indexOf(water) == -1){
-                //     filtered_points.push(list_of_points[i]);
-                // }
-                if(obj.indexOf(road) > -1){
-                    filtered_points.push(list_of_points[i]);
-                }
-            }
-        }
-        return filtered_points;
-    }
-    
     function get_N_random_numbers(N, endIdx) {
         var unique_indexes = {};
         if (endIdx > N){
@@ -155,20 +144,6 @@ function cop_game_loop() {
 
          var pos = new Pos(loc["lat"], loc["lng"]);
          thief.update_networked_marker(loc);
-    });
-    
-    socket.on('cop_loc', function(user_data) {
-        var id = user_data['id'];
-        var lat = user_data['lat'];
-        var lng = user_data['lng'];
-        
-        if (!(id in cop_markers)) {
-            cop_markers[id] = new NPCActor(id);
-            cop_markers[id].currentpos = new Pos(lat, lng);
-            cop_markers[id].add_icon(maputils);
-        }
-        
-        cop_markers[id].update_marker(lat, lng);
     });
     
     socket.on('cop_direction_changed', function(user_data) {
