@@ -15,15 +15,23 @@ var COP = 1
 function Actor(type, id) {
     var icon_txt = id;
     if (type == THIEF) {
-        icon_txt = "T";
-    }
-    this.icon = {
+        this.icon = {
         icon: L.divIcon({
-                className: 'couriericon ' + getColorNameFromId(id),
-                html: icon_txt,
-                iconSize: [15, 15]
+                className: 'couriericon ',
+                html: '<img class="hq" src="../img/thief.png">',
+                iconSize: [25, 25]
             })
     };
+    }
+    else {
+        this.icon = {
+        icon: L.divIcon({
+                className: 'couriericon ',
+                html: '<img class="hq" src="../img/police.png">',
+                iconSize: [30, 30]
+            })
+    };
+    }
     this.marker = null;
     
     this.currentpos = null;
