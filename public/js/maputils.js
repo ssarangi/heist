@@ -3,7 +3,7 @@ function MapUtils(map, access_token) {
     this.access_token = access_token;
     
     this.panTo = function(lat, lng) {
-        this.map.panTo([lat, lng]);
+        this.map.flyTo({ center: [lng, lat] });
     }
     
     this.addLayer = function(geoJSON) {
@@ -28,7 +28,7 @@ function MapUtils(map, access_token) {
     }
     
     this.draw_path = function(linestring) {
-        this.addLayer(linestring);
+        //this.addLayer(linestring);
     }
     
     this.draw_new_path = function(id, path) {
@@ -80,33 +80,32 @@ function MapUtils(map, access_token) {
     }
     
     this.add_goal_pt = function(goal_pt) {
-        var hq =
-        {
-          "type": "FeatureCollection",
-          "features": [
-            {
-              "type": "Feature",
-              "properties": {},
-              "geometry": {
-                "type": "Point",
-                "coordinates": [goal_pt.lng, goal_pt.lat],
-              }
-            },
-          ]
-        };
+        // var hq =
+        // {
+        //   "type": "FeatureCollection",
+        //   "features": [
+        //     {
+        //       "type": "Feature",
+        //       "properties": {},
+        //       "geometry": {
+        //         "type": "Point",
+        //         "coordinates": [goal_pt.lng, goal_pt.lat],
+        //       }
+        //     },
+        //   ]
+        // };
         
+        // function reverseCoords(pair) {return [pair[1], pair[0]]}
     
-        function reverseCoords(pair) {return [pair[1], pair[0]]}
-    
-        hq.features.forEach(function(n) {
-            L.marker(
-              reverseCoords(n.geometry.coordinates),
-              {icon: L.divIcon({
-              className: 'goal',
-              iconSize: [20, 20],
-              html: '<img class="hq" src="../img/thief_goal.png">'
-              })}
-            ).addTo(map);
-        });
+        // hq.features.forEach(function(n) {
+        //     L.marker(
+        //       reverseCoords(n.geometry.coordinates),
+        //       {icon: L.divIcon({
+        //       className: 'goal',
+        //       iconSize: [20, 20],
+        //       html: '<img class="hq" src="../img/thief_goal.png">'
+        //       })}
+        //     ).addTo(map);
+        // });
     }
 }

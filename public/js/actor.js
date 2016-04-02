@@ -1,32 +1,13 @@
-function Pos(lat, lng) {
-    this.lat = lat;
-    this.lng = lng;
-    
-    this.array = function() {
-        return [this.lat, this.lng];
-    }
-}
-
 var THIEF = 0;
 var COP = 1
 
 // http://www.livetrain.nyc/
 
-function Actor(type, id) {
-    var icon_txt = id;
-    if (type == THIEF) {
-        icon_txt = "T";
-    }
-    this.icon = {
-        icon: L.divIcon({
-                className: 'couriericon ' + getColorNameFromId(id),
-                html: icon_txt,
-                iconSize: [15, 15]
-            })
-    };
-    this.marker = null;
-    
+function Actor(type, id) {    
     this.currentpos = null;
+    this.currentpossrc = null;
+    this.internal_current_pos = null;
+    
     this.startpoint = null;
     this.endpoint = null;
     this.path = null;
@@ -64,14 +45,33 @@ function Actor(type, id) {
     
     this.initialize = function(startpoint, endpoint) {
         this.currentpos = startpoint;
+        this.internal_current_pos = {
+            "type": "Point",
+            "coordinates": [this.currentpos.lng, this.currentpos.lat],
+        };
+
+        // add the GeoJSON above to a new vector tile source
+        this.currentpossrc = new mapboxgl.GeoJSONSource({
+            data: this.internal_current_pos
+        });
+
         this.startpoint = startpoint;
         this.endpoint = endpoint;
     }
     
     this.add_icon = function(map_utils) {
-        if (this.marker == null) {
-            this.marker = map_utils.add_icon(this.icon, this.startpoint.array());
-        }
+        var actor_id = "actor_" + this.id;
+        map_utils.map.addSource(actor_id, this.currentpossrc);
+        map_utils.map.addLayer({
+            "id": actor_id,
+            "type": "circle",
+            "source": actor_id,
+            "paint": {
+                "circle-radius": 10,
+                "circle-color": getColorHexFromId(this.id),
+                "circle-opacity": 1.0
+            }
+        });
     }
     
     this.next_path_step = function() {
@@ -81,7 +81,7 @@ function Actor(type, id) {
         
         try {
             var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
-            this.currentpos = new Pos(waypoint[1], waypoint[0]);
+            this.update_current_pos(new mapboxgl.LngLat(waypoint[0], waypoint[1]));
             return waypoint;
         } catch (err) {
             console.log(err.message);
@@ -89,58 +89,71 @@ function Actor(type, id) {
     }
     
     this.update_marker = function() {
-        if (this.marker != null) {
-            var next_step = this.next_path_step();
-            if (next_step != null)
-                this.marker.setLatLng(L.latLng([next_step[1], next_step[0]]));
-        } else {
-            return Error("Path tracing not initialized");
-        }
-    }
-    
-    this.update_networked_marker = function(pos) {
-        if (this.marker != null) {
-            this.currentpos = pos;
-            this.marker.setLatLng([pos.lat, pos.lng]);
-        }
+        var next_step = this.next_path_step();
     }
     
     this.at_end_pt = function(maputils) {
         var distance = maputils.distance(this.currentpos, this.endpoint);
         if (distance < 0.03)
         {
-            this.currentpos = this.endpoint;
+            this.update_current_pos(this.endpoint);
             this.update_marker();
             return true;
         }
         return false;
+    }
+
+    this.update_current_pos = function(new_pos) {
+        this.currentpos = new_pos;
+        this.internal_current_pos.coordinates[0] = new_pos.lng;
+        this.internal_current_pos.coordinates[1] = new_pos.lat;
+        this.currentpossrc.setData(this.internal_current_pos);
     }
 }
 
 function NPCActor(id) {
     var icon_txt = id;
 
-    this.icon = {
-        icon: L.divIcon({
-                className: 'couriericon ' + getColorNameFromId(id),
-                html: icon_txt,
-                iconSize: [15, 15]
-            })
-    };
-    
-    this.marker = null;
+    this.id = id;
     this.currentpos = null;
+    this.currentpossrc = null;
+    this.internal_current_pos = null;
+
     this.linestring = null;
+
+    this.initialize = function(current_pos) {
+       this.internal_current_pos = {
+            "type": "Point",
+            "coordinates": [current_pos.lng, current_pos.lat],
+        };
+
+        // add the GeoJSON above to a new vector tile source
+        this.currentpossrc = new mapboxgl.GeoJSONSource({
+            data: this.internal_current_pos
+        });
+
+        this.update_current_pos(current_pos);        
+    }
     
     this.add_icon = function(map_utils) {
-        if (this.currentpos != null) {
-            this.marker = map_utils.add_icon(this.icon, this.currentpos.array());
-        }
+        var actor_id = "actor_" + this.id;
+        map_utils.map.addSource(actor_id, this.currentpossrc);
+        map_utils.map.addLayer({
+            "id": actor_id,
+            "type": "circle",
+            "source": actor_id,
+            "paint": {
+                "circle-radius": 10,
+                "circle-color": getColorHexFromId(this.id),
+                "circle-opacity": 1.0
+            }
+        });
     }
     
-    this.update_marker = function(lat, lng) {
-        if (this.marker != null) {
-            this.marker.setLatLng([lat, lng]);
-        }
-    }
+    this.update_current_pos = function(new_pos) {
+        this.currentpos = new_pos;
+        this.internal_current_pos.coordinates[0] = new_pos.lng;
+        this.internal_current_pos.coordinates[1] = new_pos.lat;
+        this.currentpossrc.setData(this.internal_current_pos);
+    }    
 }
