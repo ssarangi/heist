@@ -139,10 +139,12 @@ function Actor(type, id) {
 }
 
 function NPCActor(id) {
+    var icon_txt = id;
+
     this.icon = {
         icon: L.divIcon({
                 className: 'couriericon ' + getColorNameFromId(id),
-                html: '',
+                html: icon_txt,
                 iconSize: [15, 15]
             })
     };

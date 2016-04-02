@@ -73,6 +73,7 @@ function cop_game_loop() {
     var me = null;
     var thief = null;
     var moveStep;
+    var user_clicked = false;
 
     function get_N_random_numbers(N, endIdx) {
         var unique_indexes = {};
@@ -169,7 +170,13 @@ function cop_game_loop() {
         me.update_marker();
         maputils.panTo(me.currentpos.lat, me.currentpos.lng);
         socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
-        if (!me.at_end_pt()) { moveStep = setTimeout(update_my_frame, 100); }
+        if (!me.at_end_pt()) {
+            moveStep = setTimeout(update_my_frame, 100);
+        } else if (user_clicked == false) {
+            me.endpoint = thief.currentpos;
+            me.reset();
+            me.get_directions(maputils, my_directions_updated);
+        }
     }
     
     function initialize_cop(thief_loc) {
@@ -188,5 +195,6 @@ function cop_game_loop() {
         me.reset();
         // maputils.clearPath();
         me.get_directions(maputils, my_directions_updated);
+        this.user_clicked = true;
     });
 }
