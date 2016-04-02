@@ -34,10 +34,43 @@ var userData = function(name) {
 
 var MAX_COPS = 5;
 var users_id_map = {}
-var current_cop = 1;
 var cops = {}
 
 var thief_loc = null;
+
+function Queue() {
+    this._oldestIndex = 1;
+    this._newestIndex = 1;
+    this._storage = {};
+}
+ 
+Queue.prototype.size = function() {
+    return this._newestIndex - this._oldestIndex;
+};
+ 
+Queue.prototype.enqueue = function(data) {
+    this._storage[this._newestIndex] = data;
+    this._newestIndex++;
+};
+ 
+Queue.prototype.dequeue = function() {
+    var oldestIndex = this._oldestIndex,
+        newestIndex = this._newestIndex,
+        deletedData;
+ 
+    if (oldestIndex !== newestIndex) {
+        deletedData = this._storage[oldestIndex];
+        delete this._storage[oldestIndex];
+        this._oldestIndex++;
+ 
+        return deletedData;
+    }
+};
+
+var cops_id_queue = new Queue();
+for (var i = 1; i <= MAX_COPS; ++i) {
+    cops_id_queue.enqueue(i);
+}
 
 io.on('connection', function(socket) {
     console.log('a user connected');
@@ -47,7 +80,7 @@ io.on('connection', function(socket) {
         // delete users_id_map[this.id];
         // socket.broadcast.emit('user_disconnected', username);
         // console.log(username + ' disconnected');
-        delete cops[this.id];
+        cops_id_queue.enqueue(cops[this.id]);
     });
     
     socket.on('user_connected', function(username) {
@@ -87,12 +120,12 @@ io.on('connection', function(socket) {
     });
     
     socket.on('new_cop_request', function(username) {
-        if (Object.keys(cops).length > MAX_COPS) {
+        if (cops_id_queue.size() == 0) {
             socket.emit("no_room", "");
         } else {
-            socket.emit("cop_id", {"id": current_cop, "thief_loc": thief_loc});
-            cops[this.id] = current_cop;
-            current_cop += 1;
+            var id = cops_id_queue.dequeue();
+            cops[this.id] = id;
+            socket.emit("cop_id", {"id": id, "thief_loc": thief_loc});
         }
     });
 })

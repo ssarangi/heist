@@ -70,8 +70,9 @@ function cop_game_loop() {
         my_id = info["id"];
         var thief_loc = info.thief_loc;
        
-        if (thief_loc != null)
-        initialize_cop(thief_loc);
+        if (thief_loc != null) {
+            initialize_cop(thief_loc);
+        }
     });
     
     socket.on('no_room', function(msg) {
@@ -85,7 +86,7 @@ function cop_game_loop() {
              thief.add_icon(maputils);
         }
 
-         var pos = new Pos(loc[0], loc[1]);
+         var pos = new Pos(loc["lat"], loc["lng"]);
          thief.update_networked_marker(loc);
     });
     

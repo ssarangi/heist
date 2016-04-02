@@ -38,8 +38,18 @@ function MapUtils(map, access_token) {
         var color_val = getColorHexFromId(id);
         
         $('.'+ color_name + 'path').remove();
+        
+        var polyline_options = {
+            color: '#' + color_val,
+            opacity: 1,         // Stroke opacity
+            weight: 3,         // Stroke weight
+            fillColor: '#' + color_val,  // Fill color
+            fillOpacity: 1,    // Fill opacity
+            className: color_name + 'path' // Class name for the polyline object
+        };
+        
         var courierRoute = 
-            L.polyline(processedCoords, {color: "#"+ color_val, className: color_name + 'path'}).addTo(this.map);
+            L.polyline(processedCoords, polyline_options).addTo(this.map);
             
         $('path').css('stroke-dashoffset',0)
     }

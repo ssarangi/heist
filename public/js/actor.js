@@ -30,11 +30,14 @@ function Actor(type, id) {
     this.type = type;
     this.id = id;
     
-    this.where_in_path = -1;
+    this.trip_distance = null;
+    this.trip_duration = null;
+    this.increment = 0;
+    this.pollingInterval = 10;
     
     this.reset = function() {
-        this.where_in_path = 0;
         this.startpoint = this.currentpos;
+        this.increment = 0;
     }
 
     this.get_directions = function(map_utils, on_complete) {
@@ -44,6 +47,8 @@ function Actor(type, id) {
         
         map_utils.get_directions([start_pt.lng, start_pt.lat], [end_pt.lng, end_pt.lat], function(data) {
             actor.path = data.routes[0]['geometry']['coordinates'];
+            actor.trip_distance = data.routes[0].distance;
+            actor.trip_duration = (data.routes[0].duration/(60*3.2)).toFixed(0);
             // actor.path = data.routes[0].geometry.coordinates;
             actor.linestring = turf.linestring(actor.path, {
                   "stroke": "#" + getColorHexFromId(actor.id),
@@ -67,16 +72,12 @@ function Actor(type, id) {
     
     this.next_path_step = function() {
         if (this.path != null) {
-            this.where_in_path += 1;
+            this.increment++;
         }
-        
-        if (this.where_in_path >= 0 && this.where_in_path < this.linestring.geometry.coordinates.length) {
-            var coords = this.linestring.geometry.coordinates[this.where_in_path];
-            this.currentpos = new Pos(coords[1], coords[0]);
-            return coords;
-        } else {
-            return null;
-        }
+       
+        var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
+        this.currentpos = new Pos(waypoint[1], waypoint[0]);
+        return waypoint;
     }
     
     this.update_marker = function() {
@@ -97,9 +98,38 @@ function Actor(type, id) {
     }
     
     this.at_end_pt = function() {
-        if (this.where_in_path == this.linestring.geometry.coordinates.length)
+        var point1 = {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [this.currentpos.lng, this.currentpos.lat]
+          }
+        };
+
+        var point2 = {
+          "type": "Feature",
+          "properties": {},
+          "geometry": {
+            "type": "Point",
+            "coordinates": [this.endpoint.lng, this.endpoint.lat]
+          }
+        };
+        
+        var units = "miles";
+
+        var points = {
+            "type": "FeatureCollection",
+            "features": [point1, point2]
+        };
+
+        var distance = turf.distance(point1, point2, units);
+        if (distance < 0.03)
+        {
+            this.currentpos = this.endpoint;
+            this.update_marker();
             return true;
-            
+        }
         return false;
     }
 }
