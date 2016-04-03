@@ -74,7 +74,6 @@ function MapUtils(map, access_token) {
         };
         
         var units = "miles";
-
         var distance = turf.distance(point1, point2, units);
         return distance;
     }
