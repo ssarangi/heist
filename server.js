@@ -59,12 +59,13 @@ Queue.prototype.dequeue = function() {
     var oldestIndex = this._oldestIndex,
         newestIndex = this._newestIndex,
         deletedData;
- 
+    
+    
     if (oldestIndex !== newestIndex) {
         deletedData = this._storage[oldestIndex];
         delete this._storage[oldestIndex];
         this._oldestIndex++;
- 
+        
         return deletedData;
     }
 };
@@ -82,9 +83,11 @@ io.on('connection', function(socket) {
         // delete users_id_map[this.id];
         // socket.broadcast.emit('user_disconnected', username);
         // console.log(username + ' disconnected');
-        cops_id_queue.enqueue(cops[this.id]);
-        console.log("user " + cops[this.id] + " disconnected");
-        console.log("regained id " + cops[this.id]);
+        if (cops[this.id] != undefined){
+            cops_id_queue.enqueue(cops[this.id]);
+            console.log("user " + cops[this.id] + " disconnected");
+            console.log("regained id " + cops[this.id]);
+        }
     });
     
     socket.on('user_connected', function(username) {
