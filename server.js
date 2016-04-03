@@ -5,6 +5,7 @@ var io   = require('socket.io')(http);
 
 var port = process.env.PORT || 8080;
 var ip = process.env.IP || "127.0.0.1";
+var cop_joined_order = {};
 
 app.use(express.static('public'));
 
@@ -32,7 +33,7 @@ var userData = function(name) {
 }
 
 
-var MAX_COPS = 6;
+var MAX_COPS = 5;
 var users_id_map = {}
 var cops = {}
 
@@ -82,6 +83,8 @@ io.on('connection', function(socket) {
         // socket.broadcast.emit('user_disconnected', username);
         // console.log(username + ' disconnected');
         cops_id_queue.enqueue(cops[this.id]);
+        console.log("user " + cops[this.id] + " disconnected");
+        console.log("regained id " + cops[this.id]);
     });
     
     socket.on('user_connected', function(username) {
@@ -130,17 +133,28 @@ io.on('connection', function(socket) {
             socket.emit("no_room", "");
         } else {
             var id = cops_id_queue.dequeue();
+            console.log("served id " + id);
             cops[this.id] = id;
             socket.emit("cop_id", {"id": id, "thief_loc": thief_loc, "goal_pt": goal_pt});
         }
     });
     
     socket.on('thief_won', function(txt) {
+       cop_joined_order = {};
        socket.broadcast.emit('thief_won'); 
     });
     
     socket.on('cop_won', function(txt) {
+       cop_joined_order = {};
        socket.broadcast.emit('cop_won',txt); 
+    });
+    
+    socket.on('cop_joined', function(txt) {
+        console.log("Cop " + txt + " joined");
+        socket.broadcast.emit('cop_joined', txt);
+        //send to new cop list of previous cops who joined
+        socket.emit('previous_cops', cop_joined_order);
+        cop_joined_order[txt] = txt;
     });
 })
 

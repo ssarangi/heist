@@ -113,7 +113,7 @@ function Actor(type, id) {
     
     this.at_end_pt = function(maputils) {
         var distance = maputils.distance(this.currentpos, this.endpoint);
-        if (distance < 0.03)
+        if (distance < 0.05)
         {
             this.currentpos = this.endpoint;
             this.update_marker();
