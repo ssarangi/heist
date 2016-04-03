@@ -120,6 +120,7 @@ function thief_game_loop() {
     this.thief = new Actor(THIEF, 0);
     this.thief.initialize(start_pt, goal_pt);
     this.thief.get_directions(maputils, thief_directions_updated);
+    var user_clicked = false;
     
     function update_frame() {
         if(!game_over){
@@ -130,9 +131,18 @@ function thief_game_loop() {
                 moveStep = setTimeout(update_frame, 100);
             } 
             else {
-                // alert("End");
-                socket.emit("thief_won", "");
-                document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
+                if (user_clicked){
+                    var distance_to_safehouse = maputils.distance(this.thief.currentpos, goal_pt);
+                    console.log(distance_to_safehouse);
+                    if (distance_to_safehouse < 0.03){
+                        socket.emit("thief_won", "");
+                        document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
+                    }
+                }
+                else{
+                     socket.emit("thief_won", "");
+                     document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
+                }
             }
         }
     }
@@ -145,6 +155,7 @@ function thief_game_loop() {
         thief.reset();
         maputils.clearPath();
         thief.get_directions(maputils, thief_directions_updated);
+        user_clicked = true;
         document.getElementById('features').innerHTML += "You changed directions, is that wise? \n";
     });
 }
