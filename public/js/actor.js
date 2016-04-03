@@ -44,6 +44,7 @@ function Actor(type, id) {
     this.trip_duration = null;
     this.increment = 0;
     this.pollingInterval = 10;
+    this.last_computed_distance = null;
     
     this.reset = function() {
         this.startpoint = this.currentpos;
@@ -113,12 +114,14 @@ function Actor(type, id) {
     
     this.at_end_pt = function(maputils) {
         var distance = maputils.distance(this.currentpos, this.endpoint);
-        if (distance < 0.05)
+        if (distance < 0.05 || (distance - this.last_computed_distance) == 0)
         {
             this.currentpos = this.endpoint;
             this.update_marker();
+            this.last_computed_distance = distance;
             return true;
         }
+        this.last_computed_distance = distance;
         return false;
     }
 }

@@ -40,8 +40,6 @@ socket.on('cop_joined', function(msg) {
 });
 
 
-
-
 socket.on('thief_goal_pt', function(user_data) {
     var pos = new Pos(user_data['lat'], user_data['lng']);
     maputils.add_goal_pt(pos);
@@ -108,7 +106,7 @@ function thief_game_loop() {
         update_frame();
     }
 
-    var goal_pt = generate_position_within_radius(start_pt, 5);
+    var goal_pt = generate_position_within_radius(start_pt, 10);
     maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
         var len = data.routes[0].geometry.coordinates.length;
         var coords = data.routes[0].geometry.coordinates[len - 1];
