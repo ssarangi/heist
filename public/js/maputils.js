@@ -27,10 +27,6 @@ function MapUtils(map, access_token) {
         return L.marker(pos, icon).addTo(map);
     }
     
-    this.remove_icon = function(icon, pos) {
-        return L.marker(pos, icon).remove();
-    }
-    
     this.draw_path = function(linestring) {
         this.addLayer(linestring);
     }

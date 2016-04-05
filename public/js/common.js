@@ -44,7 +44,7 @@ socket.on('cop_left', function(cop_id){
     maputils.remove_path(cop_id);
     if (cop_id in cop_markers){
         var cop = cop_markers[cop_id];
-        // cop.icon[]
+        cop.remove_icon(maputils);
         delete cop_markers[cop_id];
     }
 });

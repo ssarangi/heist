@@ -155,6 +155,10 @@ function NPCActor(id) {
         }
     }
     
+    this.remove_icon = function(map_utils) {
+       map_utils.map.removeLayer(this.marker);
+    }
+    
     this.update_marker = function(lat, lng) {
         if (this.marker != null) {
             this.marker.setLatLng([lat, lng]);
