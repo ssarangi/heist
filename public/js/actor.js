@@ -81,6 +81,14 @@ function Actor(type, id) {
         }
     }
     
+    this.remove_icon = function(map_utils) {
+        if (this.marker != null) {
+            this.marker.remove();
+        }
+    }
+    
+    
+    
     this.next_path_step = function() {
         if (this.path != null) {
             this.increment++;

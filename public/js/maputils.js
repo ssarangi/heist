@@ -27,6 +27,10 @@ function MapUtils(map, access_token) {
         return L.marker(pos, icon).addTo(map);
     }
     
+    this.remove_icon = function(icon, pos) {
+        return L.marker(pos, icon).remove();
+    }
+    
     this.draw_path = function(linestring) {
         this.addLayer(linestring);
     }
@@ -52,6 +56,11 @@ function MapUtils(map, access_token) {
             L.polyline(processedCoords, polyline_options).addTo(this.map);
             
         $('path').css('stroke-dashoffset',0)
+    }
+    
+    this.remove_path = function(id) {
+        var color_name = getColorNameFromId(id);
+        $('.'+ color_name + 'path').remove();
     }
     
     this.distance = function(p1, p2) {

@@ -87,6 +87,8 @@ io.on('connection', function(socket) {
             cops_id_queue.enqueue(cops[this.id]);
             console.log("user " + cops[this.id] + " disconnected");
             console.log("regained id " + cops[this.id]);
+            socket.broadcast.emit('cop_left', cops[this.id]);
+            delete cops[this.id];
         }
     });
     

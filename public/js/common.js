@@ -30,13 +30,23 @@ socket.on('thief_won', function(msg) {
     document.getElementById('features').innerHTML += "Thief reached his safehouse. \nGame Over.";
 });
 
-socket.on('cop_won', function(msg) {
+socket.on('cop_won', function(cop_id) {
     game_over = true;
-    document.getElementById('features').innerHTML += "Cop " + msg + " caught up with the thief. \nGame Over.";
+    document.getElementById('features').innerHTML += "Cop " + cop_id + " caught up with the thief. \nGame Over.";
 });
 
-socket.on('cop_joined', function(msg) {
-    document.getElementById('features').innerHTML += "Cop " + msg + " joined the heist.\n";
+socket.on('cop_joined', function(cop_id) {
+    document.getElementById('features').innerHTML += "Cop " + cop_id + " joined the heist.\n";
+});
+
+socket.on('cop_left', function(cop_id){
+    document.getElementById('features').innerHTML += "Cop " + cop_id + " left the heist.\n";
+    maputils.remove_path(cop_id);
+    if (cop_id in cop_markers){
+        var cop = cop_markers[cop_id];
+        // cop.icon[]
+        delete cop_markers[cop_id];
+    }
 });
 
 
