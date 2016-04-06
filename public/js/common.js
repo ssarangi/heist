@@ -145,11 +145,13 @@ function thief_game_loop() {
                     var distance_to_safehouse = maputils.distance(this.thief.currentpos, goal_pt);
                     moveStep = setTimeout(update_frame, 100);
                     if (distance_to_safehouse < 0.03){
+                        game_over = true;
                         socket.emit("thief_won", "");
                         document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
                     }
                 }
                 else{
+                     game_over = true;
                      socket.emit("thief_won", "");
                      document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
                 }
