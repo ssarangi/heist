@@ -9,6 +9,7 @@ var map = L.mapbox.map('map', 'mapbox.light',{'scrollWheelZoom':true})
 var maputils = new MapUtils(map, this.access_token);
 var socket = io();
 var cop_markers = {}
+var game_over = false;
 
 socket.on('cop_loc', function(user_data) {
     var id = user_data['id'];
@@ -25,8 +26,29 @@ socket.on('cop_loc', function(user_data) {
 });
 
 socket.on('thief_won', function(msg) {
-    alert("Thief Won the game");
+    game_over = true;
+    document.getElementById('features').innerHTML += "Thief reached his safehouse. \nGame Over.";
 });
+
+socket.on('cop_won', function(cop_id) {
+    game_over = true;
+    document.getElementById('features').innerHTML += "Cop " + cop_id + " caught up with the thief. \nGame Over.";
+});
+
+socket.on('cop_joined', function(cop_id) {
+    document.getElementById('features').innerHTML += "Cop " + cop_id + " joined the heist.\n";
+});
+
+socket.on('cop_left', function(cop_id){
+    document.getElementById('features').innerHTML += "Cop " + cop_id + " left the heist.\n";
+    maputils.remove_path(cop_id);
+    if (cop_id in cop_markers){
+        var cop = cop_markers[cop_id];
+        cop.remove_icon(maputils);
+        delete cop_markers[cop_id];
+    }
+});
+
 
 socket.on('thief_goal_pt', function(user_data) {
     var pos = new Pos(user_data['lat'], user_data['lng']);
@@ -77,10 +99,12 @@ function generate_position_within_radius(pos, radius) {
     }
 }
 
+
+//-------------------------------THIEF LOOP----------------------------------------------
 function thief_game_loop() {
     var moveStep;
     var start_pt = new Pos(37.796931, -122.265491);
-
+ 
     function thief_directions_updated() {
         maputils.draw_path(this.thief.linestring);
         this.thief.add_icon(maputils);
@@ -92,7 +116,7 @@ function thief_game_loop() {
         update_frame();
     }
 
-    var goal_pt = generate_position_within_radius(start_pt, 15);
+    var goal_pt = generate_position_within_radius(start_pt, 10);
     maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
         var len = data.routes[0].geometry.coordinates.length;
         var coords = data.routes[0].geometry.coordinates[len - 1];
@@ -101,26 +125,36 @@ function thief_game_loop() {
         maputils.add_goal_pt(goal_pt);
     });
     
+
     // Initialize the Actor. In this case, a new thief first
     this.thief = new Actor(THIEF, 0);
     this.thief.initialize(start_pt, goal_pt);
     this.thief.get_directions(maputils, thief_directions_updated);
+    var user_clicked = false;
     
     function update_frame() {
-        this.thief.update_marker();
-        maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
-        socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
-        if (!this.thief.at_end_pt(maputils)) { 
-            moveStep = setTimeout(update_frame, 100);
-        } else {
-            var distance = maputils.distance(this.thief.currentpos, goal_pt);
-            if (distance < 0.05) {
-                socket.emit("thief_won", "");
-                alert("Thief Won");
-            } else {
-                this.thief.currentpos = this.thief.startpoint;
-                this.thief.reset();
+        if(!game_over){
+            this.thief.update_marker();
+            maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
+            socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
+            if (!this.thief.at_end_pt(maputils)) { 
                 moveStep = setTimeout(update_frame, 100);
+            } 
+            else {
+                if (user_clicked){
+                    var distance_to_safehouse = maputils.distance(this.thief.currentpos, goal_pt);
+                    moveStep = setTimeout(update_frame, 100);
+                    if (distance_to_safehouse < 0.03){
+                        game_over = true;
+                        socket.emit("thief_won", "");
+                        document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
+                    }
+                }
+                else{
+                     game_over = true;
+                     socket.emit("thief_won", "");
+                     document.getElementById('features').innerHTML += "You reached the safehouse. \nGame Over.";
+                }
             }
         }
     }
@@ -133,9 +167,13 @@ function thief_game_loop() {
         thief.reset();
         maputils.clearPath();
         thief.get_directions(maputils, thief_directions_updated);
+        user_clicked = true;
+        document.getElementById('features').innerHTML += "You changed directions, is that wise? \n";
     });
 }
 
+
+//-------------------------------COP LOOP----------------------------------------------
 function cop_game_loop() {
     var username = "myname";
     var my_id = null;
@@ -147,6 +185,19 @@ function cop_game_loop() {
     // Emit a new request
     if (my_id == null)
         socket.emit("new_cop_request", username);
+        
+    function initialize_cop(thief_loc, goal_pt) {
+        me = new Actor(COP, my_id);
+        var thief_pos = new Pos(thief_loc["lat"], thief_loc["lng"]);
+        maputils.panTo(thief_pos.lat, thief_pos.lng);
+
+        var cop_pos = generate_position_within_radius(thief_pos, 0.5);
+        me.initialize(cop_pos, thief_pos);
+        maputils.add_goal_pt(goal_pt);
+        me.get_directions(maputils, my_directions_updated);
+        document.getElementById('features').innerHTML += "You joined the heist. Your id is " + my_id + "\n";
+        socket.emit('cop_joined', my_id);
+    }
     
     socket.on('cop_id', function(info) {
         my_id = info["id"];
@@ -158,8 +209,22 @@ function cop_game_loop() {
         }
     });
     
+    socket.on('previous_cops', function(msg) {
+        var ordered_list = "";
+        if (Object.keys(msg).length >= 1){
+            document.getElementById('features').innerHTML += "Before you joined: \n";
+            ordered_list = "\t";
+        }
+        for (var key in msg){
+            if (key != my_id)
+                document.getElementById('features').innerHTML += ordered_list + "Cop " + key + " joined the heist.\n";
+        }
+    
+});
+
+    
     socket.on('no_room', function(msg) {
-        alert("No more room on Server. Try again later!!!");
+        document.getElementById('features').innerHTML = "No more room on Server. Try again later!!!"
     });
     
     socket.on('thief_loc', function(loc) {
@@ -167,10 +232,22 @@ function cop_game_loop() {
              thief = new Actor(THIEF, 0);
              thief.startpoint = new Pos(loc["lat"], loc["lng"]);
              thief.add_icon(maputils);
-        }
-
-         var pos = new Pos(loc["lat"], loc["lng"]);
-         thief.update_networked_marker(loc);
+         }
+          
+         var thief_pos = new Pos(loc["lat"], loc["lng"]);
+         if (!game_over){
+             if (me != null && me.currentpos != null) {
+                 var distance = maputils.distance(thief_pos, me.currentpos);
+                 if (distance < 0.01)
+                 {
+                     socket.emit('cop_won', my_id);
+                     game_over = true;
+                     document.getElementById('features').innerHTML += "You caught the thief! \nGame Over.";
+                 }
+             }
+         }
+         
+         thief.update_networked_marker(thief_pos);
     });
     
     socket.on('cop_direction_changed', function(user_data) {
@@ -193,28 +270,20 @@ function cop_game_loop() {
     }
     
     function update_my_frame() {
-        me.update_marker();
-        maputils.panTo(me.currentpos.lat, me.currentpos.lng);
-        socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
-        if (!me.at_end_pt(maputils)) {
-            moveStep = setTimeout(update_my_frame, 100);
-        } else if (user_clicked == false) {
-            me.endpoint = thief.currentpos;
-            me.reset();
-            me.get_directions(maputils, my_directions_updated);
+        if(!game_over){
+            me.update_marker();
+            maputils.panTo(me.currentpos.lat, me.currentpos.lng);
+            socket.emit("cop_loc", {"id": me.id, "lat": me.currentpos.lat, "lng": me.currentpos.lng });
+            if (!me.at_end_pt(maputils)) {
+                moveStep = setTimeout(update_my_frame, 100);
+            } else if (user_clicked == false) {
+                me.endpoint = thief.currentpos;
+                me.reset();
+                me.get_directions(maputils, my_directions_updated);
+            }
         }
     }
     
-    function initialize_cop(thief_loc, goal_pt) {
-        me = new Actor(COP, my_id);
-        var thief_pos = new Pos(thief_loc["lat"], thief_loc["lng"]);
-        maputils.panTo(thief_pos.lat, thief_pos.lng);
-
-        var cop_pos = generate_position_within_radius(thief_pos, 1);
-        me.initialize(cop_pos, thief_pos);
-        maputils.add_goal_pt(goal_pt);
-        me.get_directions(maputils, my_directions_updated);
-    }
     
     map.on('click', function(e) {
         window.clearTimeout(moveStep);

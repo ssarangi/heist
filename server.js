@@ -5,6 +5,7 @@ var io   = require('socket.io')(http);
 
 var port = process.env.PORT || 8080;
 var ip = process.env.IP || "127.0.0.1";
+var cop_joined_order = {};
 
 app.use(express.static('public'));
 
@@ -58,12 +59,13 @@ Queue.prototype.dequeue = function() {
     var oldestIndex = this._oldestIndex,
         newestIndex = this._newestIndex,
         deletedData;
- 
+    
+    
     if (oldestIndex !== newestIndex) {
         deletedData = this._storage[oldestIndex];
         delete this._storage[oldestIndex];
         this._oldestIndex++;
- 
+        
         return deletedData;
     }
 };
@@ -81,7 +83,13 @@ io.on('connection', function(socket) {
         // delete users_id_map[this.id];
         // socket.broadcast.emit('user_disconnected', username);
         // console.log(username + ' disconnected');
-        cops_id_queue.enqueue(cops[this.id]);
+        if (cops[this.id] != undefined){
+            cops_id_queue.enqueue(cops[this.id]);
+            console.log("user " + cops[this.id] + " disconnected");
+            console.log("regained id " + cops[this.id]);
+            socket.broadcast.emit('cop_left', cops[this.id]);
+            delete cops[this.id];
+        }
     });
     
     socket.on('user_connected', function(username) {
@@ -130,13 +138,28 @@ io.on('connection', function(socket) {
             socket.emit("no_room", "");
         } else {
             var id = cops_id_queue.dequeue();
+            console.log("served id " + id);
             cops[this.id] = id;
             socket.emit("cop_id", {"id": id, "thief_loc": thief_loc, "goal_pt": goal_pt});
         }
     });
     
     socket.on('thief_won', function(txt) {
+       cop_joined_order = {};
        socket.broadcast.emit('thief_won'); 
+    });
+    
+    socket.on('cop_won', function(txt) {
+       cop_joined_order = {};
+       socket.broadcast.emit('cop_won',txt); 
+    });
+    
+    socket.on('cop_joined', function(txt) {
+        console.log("Cop " + txt + " joined");
+        socket.broadcast.emit('cop_joined', txt);
+        //send to new cop list of previous cops who joined
+        socket.emit('previous_cops', cop_joined_order);
+        cop_joined_order[txt] = txt;
     });
 })
 

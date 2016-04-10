@@ -15,8 +15,21 @@
     <div class="container-fluid">
       <div class="row-fluid">
         <div id='map' class='col12'></div>
+        <pre id='features'></pre>
       </div>
     </div>
+    
+    <style>
+      #features {
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          width: 300px;
+          overflow: auto;
+          background: rgba(255, 255, 255, 0.8);
+      }
+    </style>
 
     <!-- All the scripts needed for the page -->
     <script src="../socket.io/socket.io.js"></script>

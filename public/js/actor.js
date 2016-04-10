@@ -10,20 +10,26 @@ function Pos(lat, lng) {
 var THIEF = 0;
 var COP = 1
 
-// http://www.livetrain.nyc/
-
 function Actor(type, id) {
     var icon_txt = id;
     if (type == THIEF) {
-        icon_txt = "T";
-    }
-    this.icon = {
+        this.icon = {
         icon: L.divIcon({
-                className: 'couriericon ' + getColorNameFromId(id),
-                html: icon_txt,
-                iconSize: [15, 15]
+                className: 'couriericon ',
+                html: '<img class="hq" src="../img/thief.png">',
+                iconSize: [25, 25]
             })
     };
+    }
+    else {
+        this.icon = {
+        icon: L.divIcon({
+                className: 'couriericon ',
+                html: '<img class="hq" src="../img/police.png">',
+                iconSize: [40, 40]
+            })
+    };
+    }
     this.marker = null;
     
     this.currentpos = null;
@@ -38,6 +44,7 @@ function Actor(type, id) {
     this.trip_duration = null;
     this.increment = 0;
     this.pollingInterval = 10;
+    this.last_computed_distance = null;
     
     this.reset = function() {
         this.startpoint = this.currentpos;
@@ -74,6 +81,14 @@ function Actor(type, id) {
         }
     }
     
+    this.remove_icon = function(map_utils) {
+        if (this.marker != null) {
+            this.marker.remove();
+        }
+    }
+    
+    
+    
     this.next_path_step = function() {
         if (this.path != null) {
             this.increment++;
@@ -107,12 +122,14 @@ function Actor(type, id) {
     
     this.at_end_pt = function(maputils) {
         var distance = maputils.distance(this.currentpos, this.endpoint);
-        if (distance < 0.03)
+        if (distance < 0.05 || (distance - this.last_computed_distance) == 0)
         {
             this.currentpos = this.endpoint;
             this.update_marker();
+            this.last_computed_distance = distance;
             return true;
         }
+        this.last_computed_distance = distance;
         return false;
     }
 }
@@ -136,6 +153,10 @@ function NPCActor(id) {
         if (this.currentpos != null) {
             this.marker = map_utils.add_icon(this.icon, this.currentpos.array());
         }
+    }
+    
+    this.remove_icon = function(map_utils) {
+       map_utils.map.removeLayer(this.marker);
     }
     
     this.update_marker = function(lat, lng) {
