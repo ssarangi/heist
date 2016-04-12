@@ -11,6 +11,8 @@ var socket = io();
 var cop_markers = {}
 var game_over = false;
 
+socket.emit("user_connected", "");
+
 socket.on('cop_loc', function(user_data) {
     var id = user_data['id'];
     var lat = user_data['lat'];
@@ -46,6 +48,14 @@ socket.on('cop_left', function(cop_id){
         var cop = cop_markers[cop_id];
         cop.remove_icon(maputils);
         delete cop_markers[cop_id];
+    }
+});
+
+socket.on('start_game', function(player_type) {
+    if (player_type.type == "thief") {
+        thief_game_loop();
+    } else {
+        cop_game_loop();
     }
 });
 
@@ -181,7 +191,6 @@ function cop_game_loop() {
     var thief = null;
     var moveStep;
     var user_clicked = false;
-
     // Emit a new request
     if (my_id == null)
         socket.emit("new_cop_request", username);
@@ -233,7 +242,7 @@ function cop_game_loop() {
              thief.startpoint = new Pos(loc["lat"], loc["lng"]);
              thief.add_icon(maputils);
          }
-          
+         
          var thief_pos = new Pos(loc["lat"], loc["lng"]);
          if (!game_over){
              if (me != null && me.currentpos != null) {

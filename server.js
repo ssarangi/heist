@@ -13,17 +13,13 @@ app.get('/thief', function(req, res) {
     res.sendFile(__dirname + "/html/thief.html");
 });
 
-app.get('/cop', function(req, res) {
+app.get('/', function(req, res) {
     res.sendFile(__dirname + "/html/cop.html");
 });
 
 app.get('/nt', function(req, res) {
     res.sendFile(__dirname + "/html/newthief.html");
 });
-
-app.get('/c', function(req, res) {
-    res.sendFile(__dirname + "/html/courier.html");
-})
 
 var userData = function(name) {
     this.name = name;
@@ -33,7 +29,7 @@ var userData = function(name) {
 }
 
 
-var MAX_COPS = 5;
+var MAX_COPS = 4;
 var users_id_map = {}
 var cops = {}
 
@@ -79,35 +75,33 @@ io.on('connection', function(socket) {
     console.log('a user connected');
     
     socket.on('disconnect', function() {
-        // var username = users_id_map[this.id];
-        // delete users_id_map[this.id];
-        // socket.broadcast.emit('user_disconnected', username);
-        // console.log(username + ' disconnected');
-        if (cops[this.id] != undefined){
+        if (cops[this.id] != undefined) {
             cops_id_queue.enqueue(cops[this.id]);
-            console.log("user " + cops[this.id] + " disconnected");
-            console.log("regained id " + cops[this.id]);
             socket.broadcast.emit('cop_left', cops[this.id]);
             delete cops[this.id];
         }
+        
+        delete users_id_map[this.id];
     });
     
     socket.on('user_connected', function(username) {
-        socket.broadcast.emit('user_connected', username);
-        
-        var users = [];
-        for (var key in users_id_map) {
-          if (users_id_map.hasOwnProperty(key)) {
-            users.push(users_id_map[key]);
-          }
-        }
-        
-        if (users.length > 0) {
-            io.to(this.id).emit('current_users', users);
-        }
-
         var ud = new userData(username);
         users_id_map[this.id] = ud;
+
+        if (Object.keys(users_id_map).length == MAX_COPS + 1) {
+            io.to(this.id).emit("start_game", {"type": "thief"});
+        }
+        
+        // var users = [];
+        // for (var key in users_id_map) {
+        //   if (users_id_map.hasOwnProperty(key)) {
+        //     users.push(users_id_map[key]);
+        //   }
+        // }
+        
+        // if (users.length > 0) {
+        //     io.to(this.id).emit('current_users', users);
+        // }
     });
     
     socket.on('chat_message', function(msg) {
@@ -126,6 +120,7 @@ io.on('connection', function(socket) {
     
     socket.on('thief_goal_pt', function(user_data) {
         goal_pt = user_data;
+        socket.broadcast.emit("start_game", {"type": "cop"});
         socket.broadcast.emit('thief_goal_pt', user_data); 
     });
     
