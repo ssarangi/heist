@@ -89,7 +89,9 @@ io.on('connection', function(socket) {
         users_id_map[this.id] = ud;
 
         if (Object.keys(users_id_map).length == MAX_COPS + 1) {
-            io.to(this.id).emit("start_game", {"type": "thief"});
+            io.to(this.id).emit("start_game", {"type": "thief", "num_cops" : MAX_COPS});
+        } else {
+            cops[this.id] = null;
         }
         
         // var users = [];
@@ -102,6 +104,22 @@ io.on('connection', function(socket) {
         // if (users.length > 0) {
         //     io.to(this.id).emit('current_users', users);
         // }
+    });
+    
+    socket.on('cops_start_pos', function(pos) {
+        var i = 0;
+        for (var key in cops) {
+            if (cops_id_queue.size() == 0) {
+                socket.emit("no_room", "");
+            } else {
+                var id = cops_id_queue.dequeue();
+                console.log("served id " + id);
+                cops[key] = id;
+                io.to(key).emit("start_game", {"id": id, "pos": pos.cops_start_pos[i], "thief_loc": pos.thief_loc, "goal_pt": pos.goal_pt});
+            }
+            
+            i += 1;
+        }
     });
     
     socket.on('chat_message', function(msg) {
@@ -120,23 +138,11 @@ io.on('connection', function(socket) {
     
     socket.on('thief_goal_pt', function(user_data) {
         goal_pt = user_data;
-        socket.broadcast.emit("start_game", {"type": "cop"});
         socket.broadcast.emit('thief_goal_pt', user_data); 
     });
     
     socket.on('cop_direction_changed', function(user_data) {
         socket.broadcast.emit('cop_direction_changed', user_data); 
-    });
-    
-    socket.on('new_cop_request', function(username) {
-        if (cops_id_queue.size() == 0) {
-            socket.emit("no_room", "");
-        } else {
-            var id = cops_id_queue.dequeue();
-            console.log("served id " + id);
-            cops[this.id] = id;
-            socket.emit("cop_id", {"id": id, "thief_loc": thief_loc, "goal_pt": goal_pt});
-        }
     });
     
     socket.on('thief_won', function(txt) {

@@ -10,7 +10,7 @@ function Pos(lat, lng) {
 var THIEF = 0;
 var COP = 1
 
-function Actor(type, id) {
+function Actor(type, id, pollingInterval) {
     var icon_txt = id;
     if (type == THIEF) {
         this.icon = {
@@ -43,7 +43,7 @@ function Actor(type, id) {
     this.trip_distance = null;
     this.trip_duration = null;
     this.increment = 0;
-    this.pollingInterval = 10;
+    this.pollingInterval = pollingInterval;
     this.last_computed_distance = null;
     
     this.reset = function() {

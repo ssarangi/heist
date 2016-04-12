@@ -51,11 +51,11 @@ socket.on('cop_left', function(cop_id){
     }
 });
 
-socket.on('start_game', function(player_type) {
-    if (player_type.type == "thief") {
-        thief_game_loop();
+socket.on('start_game', function(info) {
+    if (info.type == "thief") {
+        thief_game_loop(info.num_cops);
     } else {
-        cop_game_loop();
+        cop_game_loop(info);
     }
 });
 
@@ -69,7 +69,7 @@ function get_N_random_numbers(N, endIdx) {
     var unique_indexes = {};
     if (endIdx > N){
         while (Object.keys(unique_indexes).length < N){
-            var rand = Math.floor(Math.random() * (endIdx + 1));
+            var rand = Math.floor(Math.random() * (endIdx));
             if (!(rand in unique_indexes)){
                 unique_indexes[rand] = rand;
             }
@@ -83,7 +83,7 @@ function get_N_random_numbers(N, endIdx) {
     return unique_indexes;
 }
 
-function generate_position_within_radius(pos, radius) {
+function generate_position_within_radius(pos, radius, number_of_cops) {
    var center_feature = {
         'type' : 'Features',
         "properties": {},
@@ -96,24 +96,32 @@ function generate_position_within_radius(pos, radius) {
         }
     };
     
+    console.log("Number of Cops: " + number_of_cops);
+    
     var one_mile_out = turf.buffer(center_feature, radius, 'miles');
     var features = one_mile_out['features']
     var geometry = features[0]['geometry']
     var list_of_points = geometry['coordinates'][0]
-    var random_indexes = get_N_random_numbers(1, list_of_points.length);
+    var random_indexes = get_N_random_numbers(number_of_cops, list_of_points.length);
+    console.log(list_of_points);
+    var cop_start_pos = [];
     
     for (var key in random_indexes) {
+        console.log(key);
         var coords = list_of_points[random_indexes[key]];
         var point = new Pos(coords[1], coords[0]);
-        return point;
+        cop_start_pos.push(point);
     }
+    return cop_start_pos;
 }
 
 
 //-------------------------------THIEF LOOP----------------------------------------------
-function thief_game_loop() {
+function thief_game_loop(num_cops) {
     var moveStep;
-    var start_pt = new Pos(37.796931, -122.265491);
+    //SFO
+    //var start_pt = new Pos(37.796931, -122.265491);
+    var start_pt = new Pos(40.763860, -73.981197);
  
     function thief_directions_updated() {
         maputils.draw_path(this.thief.linestring);
@@ -126,18 +134,22 @@ function thief_game_loop() {
         update_frame();
     }
 
-    var goal_pt = generate_position_within_radius(start_pt, 10);
+    var goal_pt = generate_position_within_radius(start_pt, 50, 1)[0];
+    
+    //get start positions og N cops
+    var cop_start_pos = generate_position_within_radius(start_pt, 5, num_cops);
     maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
         var len = data.routes[0].geometry.coordinates.length;
         var coords = data.routes[0].geometry.coordinates[len - 1];
         goal_pt = new Pos(coords[1], coords[0]);
         socket.emit("thief_goal_pt", {"lat": goal_pt.lat, "lng": goal_pt.lng });
+        socket.emit("cops_start_pos", {"cops_start_pos": cop_start_pos, "thief_loc": start_pt, "goal_pt": goal_pt});
         maputils.add_goal_pt(goal_pt);
     });
     
 
     // Initialize the Actor. In this case, a new thief first
-    this.thief = new Actor(THIEF, 0);
+    this.thief = new Actor(THIEF, 0, 9);
     this.thief.initialize(start_pt, goal_pt);
     this.thief.get_directions(maputils, thief_directions_updated);
     var user_clicked = false;
@@ -184,38 +196,48 @@ function thief_game_loop() {
 
 
 //-------------------------------COP LOOP----------------------------------------------
-function cop_game_loop() {
+function cop_game_loop(info) {
     var username = "myname";
     var my_id = null;
     var me = null;
     var thief = null;
     var moveStep;
     var user_clicked = false;
-    // Emit a new request
-    if (my_id == null)
-        socket.emit("new_cop_request", username);
-        
-    function initialize_cop(thief_loc, goal_pt) {
-        me = new Actor(COP, my_id);
-        var thief_pos = new Pos(thief_loc["lat"], thief_loc["lng"]);
-        maputils.panTo(thief_pos.lat, thief_pos.lng);
+    
+    // Start initializing the cop
+    my_id = info.id;
+    var my_pos = new Pos(info.pos.lat, info.pos.lng);
+    
+    var thief_loc = info.thief_loc;
+    var goal_pt = info.goal_pt;
+    maputils.panTo(my_pos.lat, my_pos.lng);
 
-        var cop_pos = generate_position_within_radius(thief_pos, 0.5);
+    if (thief_loc != null) {
+        initialize_cop(my_pos, thief_loc, goal_pt);
+    }
+    ///////////////////////////////////////////////////
+
+    function initialize_cop(cop_pos, thief_pos, goal_pt) {
+        me = new Actor(COP, my_id, 10);
         me.initialize(cop_pos, thief_pos);
         maputils.add_goal_pt(goal_pt);
         me.get_directions(maputils, my_directions_updated);
         document.getElementById('features').innerHTML += "You joined the heist. Your id is " + my_id + "\n";
         socket.emit('cop_joined', my_id);
+        
+    
+        map.on('click', function(e) {
+            window.clearTimeout(moveStep);
+            me.endpoint = new Pos(e['latlng']['lat'], e['latlng']['lng']);
+            me.reset();
+            // maputils.clearPath();
+            me.get_directions(maputils, my_directions_updated);
+            this.user_clicked = true;
+        });
     }
     
     socket.on('cop_id', function(info) {
-        my_id = info["id"];
-        var thief_loc = info.thief_loc;
-        var goal_pt = info.goal_pt;
-       
-        if (thief_loc != null) {
-            initialize_cop(thief_loc, goal_pt);
-        }
+
     });
     
     socket.on('previous_cops', function(msg) {
@@ -292,14 +314,4 @@ function cop_game_loop() {
             }
         }
     }
-    
-    
-    map.on('click', function(e) {
-        window.clearTimeout(moveStep);
-        me.endpoint = new Pos(e['latlng']['lat'], e['latlng']['lng']);
-        me.reset();
-        // maputils.clearPath();
-        me.get_directions(maputils, my_directions_updated);
-        this.user_clicked = true;
-    });
 }
