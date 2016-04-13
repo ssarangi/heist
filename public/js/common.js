@@ -121,6 +121,7 @@ function thief_game_loop(num_cops) {
     var moveStep;
     //SFO
     //var start_pt = new Pos(37.796931, -122.265491);
+    //Manhattan
     var start_pt = new Pos(40.763860, -73.981197);
  
     function thief_directions_updated() {
@@ -136,8 +137,28 @@ function thief_game_loop(num_cops) {
 
     var goal_pt = generate_position_within_radius(start_pt, 50, 1)[0];
     
-    //get start positions og N cops
-    var cop_start_pos = generate_position_within_radius(start_pt, 5, num_cops);
+    function get_N_cop_spawn_positions(start_pt, goal_pt, num_cops){
+        var points = [start_pt, goal_pt];
+        var waypoints= JSON.stringify(points).replace(/\],\[/g, ";").replace(/\[/g,'').replace(/\]/g,'');
+        var directionsAPI = 'https://api.tiles.mapbox.com/v4/directions/mapbox.driving/'+ waypoints +'.json?access_token='+ this.access_token;
+        var path = directionsAPI.routes[0]['geometry']['coordinates'];
+        var linestring = turf.linestring(path);
+        var trip_distance = directionsAPI.routes[0].distance;
+        var step = trip_distance / (2 * num_cops);
+        var curr_step = step;
+        var cop_spawn_loc = [];
+        for (var i = 0; i < num_cops; i++){
+            var point = turf.along(linestring, curr_step, 'miles');
+            var cop_spawened_at = generate_position_within_radius(point, 0.5, 1)[0];
+            cop_spawn_loc.push(cop_spawened_at);
+            curr_step += step;
+        }
+        return cop_spawn_loc;
+    }
+    
+    //get start positions of N cops
+    var cop_start_pos = get_N_cop_spawn_positions(start_pt, goal_pt, num_cops);
+    
     maputils.get_directions([start_pt.lng, start_pt.lat], [goal_pt.lng, goal_pt.lat], function(data) {
         var len = data.routes[0].geometry.coordinates.length;
         var coords = data.routes[0].geometry.coordinates[len - 1];
