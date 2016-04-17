@@ -93,7 +93,8 @@ function Actor(type, id, pollingInterval) {
         if (this.path != null) {
             this.increment++;
         }
-        
+        // enable this line to halt all movement
+        // this.increment = 0;
         try {
             var waypoint = turf.along(this.linestring, (this.increment * this.trip_distance * this.pollingInterval) / (this.trip_duration * 1000 * 1000), 'miles').geometry.coordinates;
             this.currentpos = new Pos(waypoint[1], waypoint[0]);

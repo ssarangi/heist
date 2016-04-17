@@ -147,10 +147,12 @@ function thief_game_loop(num_cops) {
             var cop_start_pt_on_line =  new Pos(point[1], point[0]);
             var cop_spawened_at = generate_position_within_radius(cop_start_pt_on_line, 0.5, 1)[0];
             cop_spawn_loc.push(cop_spawened_at);
-            curr_step += step;
+            curr_step += 1;
         }
         return cop_spawn_loc;
     }
+    
+    var cop_start_pos = generate_position_within_radius(start_pt, 1, num_cops);
     
    
     
@@ -178,7 +180,7 @@ function thief_game_loop(num_cops) {
     function update_frame() {
         if(!game_over){
             this.thief.update_marker();
-            // maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
+            maputils.panTo(this.thief.currentpos.lat, this.thief.currentpos.lng);
             socket.emit("thief_loc", {"lat": this.thief.currentpos.lat, "lng": this.thief.currentpos.lng });
             if (!this.thief.at_end_pt(maputils)) { 
                 moveStep = setTimeout(update_frame, 100);
