@@ -135,19 +135,19 @@ function thief_game_loop(num_cops) {
         update_frame();
     }
 
-    var goal_pt = generate_position_within_radius(start_pt, 5, 1)[0];
+    var goal_pt = generate_position_within_radius(start_pt, 10, 1)[0];
     
-    function get_N_cop_spawn_positions(path, trip_distance, num_cops){
+    function get_N_cop_spawn_positions(path, num_cops){
         var linestring = turf.linestring(path);
-        var step = trip_distance / (2 * num_cops);
-        var curr_step = 0;
+        var step = 0.75 / (num_cops);
+        var curr_step = step;
         var cop_spawn_loc = [];
         for (var i = 0; i < num_cops; i++){
             var point = turf.along(linestring, curr_step, 'miles').geometry.coordinates;
             var cop_start_pt_on_line =  new Pos(point[1], point[0]);
             var cop_spawened_at = generate_position_within_radius(cop_start_pt_on_line, 0.5, 1)[0];
             cop_spawn_loc.push(cop_spawened_at);
-            curr_step += 1;
+            curr_step += step;
         }
         return cop_spawn_loc;
     }
@@ -165,7 +165,7 @@ function thief_game_loop(num_cops) {
         //get start positions of N cops
         var path = data.routes[0]['geometry']['coordinates'];
         var distance = data.routes[0].distance;
-        var cop_start_pos = get_N_cop_spawn_positions(path, distance, num_cops);
+        var cop_start_pos = get_N_cop_spawn_positions(path, num_cops);
         socket.emit("cops_start_pos", {"cops_start_pos": cop_start_pos, "thief_loc": start_pt, "goal_pt": goal_pt});
         maputils.add_goal_pt(goal_pt);
     });
