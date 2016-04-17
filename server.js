@@ -29,7 +29,7 @@ var userData = function(name) {
 }
 
 
-var MAX_COPS = 3;
+var MAX_COPS = 4;
 var users_id_map = {}
 var cops = {}
 
